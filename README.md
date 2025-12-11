@@ -1,38 +1,39 @@
 # HumanFlow - Web App de Prospección Emocional
 
-Esta aplicación conecta Google Sheets con WhatsApp Web utilizando un diseño emocional centrado en el humano.
+Esta aplicación te permite cargar prospectos desde un archivo Excel y conectarlos con WhatsApp Web, utilizando un diseño emocional centrado en el humano.
 
-## 🚀 Cómo Desplegar en Google Apps Script
+## 🚀 Cómo Usar
 
-Esta es una aplicación React que, para producción, se recomienda compilar a un solo archivo HTML o alojar en un hosting estático que consuma el script de Google como API.
+Esta es una aplicación 100% Client-Side. No envía tus datos a ningún servidor, todo el procesamiento del archivo Excel ocurre en tu navegador.
 
-**Opción Simplificada (Copiar y Pegar):**
+1. **Prepara tu Excel:**
+   - Asegúrate de tener un archivo `.xlsx` o `.csv`.
+   - Debe tener encabezados en la primera fila (ej: `Nombre`, `Teléfono`, `Empresa`).
+   - El sistema detectará automáticamente las columnas, pero podrás confirmar cuál es cuál.
 
-1. **Google Sheet:**
-   - Crea una nueva Hoja de Cálculo.
-   - Renombra una pestaña como `Prospectos`.
-   - Crea la primera fila con encabezados: `nombre`, `apellido`, `telefono`, `empresa`, `estado`.
-   - Añade datos de prueba.
+2. **Carga el archivo:**
+   - Arrastra tu archivo a la pantalla de inicio.
 
-2. **Apps Script:**
-   - Ve a `Extensiones > Apps Script`.
-   - Borra el contenido de `Code.gs`.
-   - Copia el contenido del archivo `backend/Code.gs` de este proyecto.
-   - Crea un archivo HTML llamado `index.html`.
-   - **IMPORTANTE:** Para que funcione dentro de Apps Script directamente sin build steps complejos, deberías copiar el contenido del `index.html` generado por el build de React dentro de ese archivo. 
-   - *Nota:* Como este proyecto es React, la forma más fácil de probarlo es ejecutando el frontend localmente (npm start) que usará datos "Mock" (falsos) definidos en `services/dataService.ts`.
+3. **Configura:**
+   - Selecciona la hoja (tab) donde están los datos.
+   - Confirma qué columna es el **Nombre** y cuál es el **Teléfono**.
 
-3. **Para conectar Frontend Local con Backend Real:**
-   - Deberías modificar `services/dataService.ts` para usar `google.script.run` si estás embebido, o `fetch` si publicas el script como API Ejecutable.
+4. **Prospecta:**
+   - Edita tu mensaje base usando variables como `{{Nombre}}` o `{{Empresa}}`.
+   - Haz clic en enviar para abrir WhatsApp Web con el mensaje listo.
 
 ## 🧠 Filosofía de Diseño
 
 - **Visceral:** Colores suaves (Indigo/Slate), sombras suaves, espacios amplios.
-- **Conductual:** Flujo lineal (Conectar -> Editar -> Enviar).
+- **Conductual:** Flujo lineal (Cargar Archivo -> Mapear -> Enviar).
 - **Reflexivo:** Mensajes de confirmación que elogian al usuario ("Mensaje preparado 🎯").
 
 ## 🛠 Desarrollo Local
 
 1. `npm install`
-2. `npm start`
-3. La app iniciará en "Modo Demo" con datos simulados para que puedas probar la UX inmediatamente.
+2. `npm run dev`
+3. Abre `http://localhost:5173`
+
+## 📦 Despliegue
+
+Simplemente conecta este repositorio a **Vercel** o **Netlify**. No requiere configuración de servidor ni API keys.

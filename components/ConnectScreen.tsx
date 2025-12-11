@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { Button } from './Button';
 import { WELCOME_MSG } from '../constants';
 
 interface ConnectScreenProps {
