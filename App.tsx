@@ -28,6 +28,9 @@ const App: React.FC = () => {
   const [template, setTemplate] = useState<Template>({ content: '' });
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState<'list' | 'template'>('list');
+  
+  // New State for Sub-tab in List view
+  const [viewFilter, setViewFilter] = useState<'active' | 'sent'>('active');
 
   // Load initial template from local storage
   useEffect(() => {
@@ -35,8 +38,9 @@ const App: React.FC = () => {
     setTemplate(tpl);
   }, []);
 
-  // Filter Logic
-  const filteredProspects = useMemo(() => {
+  // 1. Base Filtering (Column Filters only)
+  // Used for Stats calculations so stats reflect the current "segment" of data being worked on
+  const prospectsFilteredByColumns = useMemo(() => {
     if (Object.keys(state.activeFilters).length === 0) return prospects;
 
     return prospects.filter(p => {
@@ -48,13 +52,36 @@ const App: React.FC = () => {
     });
   }, [prospects, state.activeFilters]);
 
-  // Calculate Dashboard Metrics
+  // 2. Display Filtering (Active vs Sent)
+  // Used for rendering the cards
+  const displayProspects = useMemo(() => {
+    return prospectsFilteredByColumns.filter(p => {
+        const status = (p.estado || p['Estado'] || p['status'] || '').toLowerCase();
+        
+        // Define what constitutes "Done/Sent"
+        const isDone = sentIds.has(p.id) || 
+                       status.includes('contactado') || 
+                       status.includes('éxito') || 
+                       status.includes('cliente') || 
+                       status.includes('ganado');
+
+        if (viewFilter === 'active') {
+            // Show only if NOT done
+            return !isDone;
+        } else {
+            // Show only if DONE
+            return isDone;
+        }
+    });
+  }, [prospectsFilteredByColumns, viewFilter, sentIds]);
+
+  // Calculate Dashboard Metrics based on the Base Filter (Column filtered data)
   const stats = useMemo(() => {
-    const total = filteredProspects.length;
+    const total = prospectsFilteredByColumns.length;
     const totalDatabase = prospects.length;
     const sessionSentCount = sentIds.size;
     
-    const contactedTotal = filteredProspects.filter(p => {
+    const contactedTotal = prospectsFilteredByColumns.filter(p => {
         const status = (p.estado || '').toLowerCase();
         const isSheetContacted = status.includes('contactado') || status.includes('éxito') || status.includes('cliente');
         const isSessionSent = sentIds.has(p.id);
@@ -64,7 +91,7 @@ const App: React.FC = () => {
     const pending = total - contactedTotal;
 
     return { total, pending, sessionSentCount, contactedTotal, totalDatabase };
-  }, [filteredProspects, prospects, sentIds]);
+  }, [prospectsFilteredByColumns, prospects, sentIds]);
 
 
   const addNotification = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -218,7 +245,7 @@ const App: React.FC = () => {
             contactedTotal={stats.contactedTotal}
         />
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs (Main) */}
         <div className="flex justify-center mb-10 mt-8">
           <div className="bg-calm-100/80 p-1.5 rounded-2xl flex w-full max-w-md shadow-inner border border-calm-200/50 relative">
             
@@ -233,7 +260,7 @@ const App: React.FC = () => {
               <svg className={`w-4 h-4 ${activeTab === 'list' ? 'fill-current' : 'fill-none stroke-current'}`} viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              Lista ({filteredProspects.length})
+              Lista ({activeTab === 'list' && viewFilter === 'active' ? stats.pending : stats.contactedTotal})
             </button>
             
             <button 
@@ -257,7 +284,38 @@ const App: React.FC = () => {
         <div className="animate-fade-in">
           {activeTab === 'list' && (
             <>
-              {/* Filter Bar */}
+              {/* Active/Sent Sub-Filters Toggle */}
+              <div className="flex items-center gap-4 mb-6">
+                 <div className="flex p-1 bg-calm-100 rounded-xl">
+                    <button 
+                        onClick={() => setViewFilter('active')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all duration-200 ${
+                            viewFilter === 'active' 
+                            ? 'bg-white text-calm-800 shadow-sm' 
+                            : 'text-calm-400 hover:text-calm-600'
+                        }`}
+                    >
+                        Pendientes
+                    </button>
+                    <button 
+                        onClick={() => setViewFilter('sent')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all duration-200 ${
+                            viewFilter === 'sent' 
+                            ? 'bg-white text-success-600 shadow-sm' 
+                            : 'text-calm-400 hover:text-calm-600'
+                        }`}
+                    >
+                        Enviados / Historial
+                    </button>
+                 </div>
+                 
+                 {/* Count Badge */}
+                 <span className="text-xs font-bold text-calm-400 bg-white px-3 py-1.5 rounded-lg border border-calm-100">
+                    Mostrando: {displayProspects.length}
+                 </span>
+              </div>
+
+              {/* Dynamic Filter Bar */}
               {state.mapping.filterableColumns.length > 0 && (
                 <FilterBar 
                   columns={state.mapping.filterableColumns}
@@ -268,18 +326,25 @@ const App: React.FC = () => {
                 />
               )}
 
-              {filteredProspects.length === 0 ? (
+              {displayProspects.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-calm-300">
-                  <p className="font-black text-xl text-calm-500">No hay prospectos.</p>
-                  {prospects.length > 0 ? (
-                     <p className="text-sm text-calm-400 mt-2 font-medium">Prueba quitando algunos filtros.</p>
-                  ) : (
-                     <p className="text-sm text-calm-400 mt-2 font-medium">Revisa tu archivo Excel.</p>
+                  <p className="font-black text-xl text-calm-500">
+                      {viewFilter === 'active' ? '¡Estás al día! 🎉' : 'Aún no hay mensajes enviados.'}
+                  </p>
+                  <p className="text-sm text-calm-400 mt-2 font-medium">
+                      {viewFilter === 'active' 
+                        ? 'No hay prospectos pendientes con los filtros actuales.' 
+                        : 'Comienza a contactar para ver tu historial aquí.'}
+                  </p>
+                  {Object.keys(state.activeFilters).length > 0 && (
+                     <button onClick={handleClearFilters} className="mt-4 text-primary-600 text-sm font-bold hover:underline">
+                         Limpiar filtros de columnas
+                     </button>
                   )}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredProspects.map(p => (
+                  {displayProspects.map(p => (
                     <ProspectCard 
                         key={p.id} 
                         prospect={p} 

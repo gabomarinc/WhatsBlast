@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Prospect } from '../types';
+import { Icons } from './Icons';
 
 interface FilterBarProps {
   columns: string[];
@@ -40,43 +41,63 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const hasActiveFilters = Object.keys(activeFilters).length > 0;
 
   return (
-    <div className="bg-white p-4 rounded-2xl border border-calm-200 mb-6 shadow-sm animate-slide-up">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xl">🌪️</span>
-        <h3 className="text-sm font-black text-calm-700 tracking-wide">Filtrar Prospectos</h3>
+    <div className="mb-8 animate-slide-up">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600">
+                <Icons.Filter className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-black text-calm-800 tracking-wide uppercase">Filtros Activos</h3>
+        </div>
+        
         {hasActiveFilters && (
           <button 
             onClick={onClearFilters}
-            className="ml-auto text-xs text-red-500 hover:text-red-600 font-bold hover:underline"
+            className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 font-bold hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
           >
-            Limpiar filtros
+            <span>Limpiar todo</span>
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         )}
       </div>
 
       <div className="flex flex-wrap gap-3">
-        {columns.map(col => (
-          <div key={col} className="relative group">
-            <select
-              value={activeFilters[col] || ''}
-              onChange={(e) => onFilterChange(col, e.target.value)}
-              className={`
-                appearance-none pl-3 pr-8 py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer outline-none focus:ring-2 focus:ring-primary-100
-                ${activeFilters[col] 
-                  ? 'bg-primary-50 border-primary-200 text-primary-700' 
-                  : 'bg-calm-50 border-calm-200 text-calm-600 hover:border-calm-300'}
-              `}
-            >
-              <option value="">{col}: Todos</option>
-              {filterOptions[col]?.map(val => (
-                <option key={val} value={val}>{val}</option>
-              ))}
-            </select>
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
-              <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-            </div>
-          </div>
-        ))}
+        {columns.map(col => {
+            const isActive = !!activeFilters[col];
+            
+            return (
+              <div key={col} className="relative group">
+                <div className={`
+                    flex items-center h-10 rounded-xl border transition-all duration-200 overflow-hidden relative
+                    ${isActive 
+                        ? 'bg-primary-50 border-primary-200 shadow-sm' 
+                        : 'bg-white border-calm-200 hover:border-calm-300'
+                    }
+                `}>
+                    <div className={`px-3 py-2 text-xs font-black uppercase tracking-wider border-r ${isActive ? 'text-primary-700 border-primary-100' : 'text-calm-500 border-calm-100'}`}>
+                        {col}
+                    </div>
+                    <select
+                      value={activeFilters[col] || ''}
+                      onChange={(e) => onFilterChange(col, e.target.value)}
+                      className={`
+                        appearance-none pl-3 pr-9 py-2 text-xs font-bold bg-transparent outline-none cursor-pointer min-w-[120px]
+                        ${isActive ? 'text-primary-800' : 'text-calm-700'}
+                      `}
+                    >
+                      <option value="">Todos</option>
+                      {filterOptions[col]?.map(val => (
+                        <option key={val} value={val}>{val}</option>
+                      ))}
+                    </select>
+                    
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-calm-400">
+                      <Icons.ChevronDown className="w-3.5 h-3.5" />
+                    </div>
+                </div>
+              </div>
+            );
+        })}
       </div>
     </div>
   );
