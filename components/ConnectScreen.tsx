@@ -1,45 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from './Button';
 import { WELCOME_MSG } from '../constants';
 
 interface ConnectScreenProps {
-  onConnect: (id: string) => void;
+  onFileSelect: (file: File) => void;
   isLoading: boolean;
 }
 
-export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onConnect, isLoading }) => {
-  const [inputVal, setInputVal] = useState('');
+export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLoading }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const extractSheetId = (url: string): string | null => {
-    // Caso 1: Es una URL completa de Google Sheets
-    // Ejemplo: https://docs.google.com/spreadsheets/d/1BxiMVs.../edit
-    const match = url.match(/\/d\/(.+?)(\/|$)/);
-    if (match && match[1]) {
-      return match[1];
-    }
-    
-    // Caso 2: El usuario pegó el ID directamente (cadena larga sin espacios ni slashes)
-    if (url.length > 20 && !url.includes('/') && !url.includes('.')) {
-      return url;
-    }
-
-    return null;
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragging(false);
     setError(null);
 
-    const cleanInput = inputVal.trim();
-    if (!cleanInput) return;
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      validateAndUpload(files[0]);
+    }
+  };
 
-    const extractedId = extractSheetId(cleanInput);
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
+    if (e.target.files && e.target.files.length > 0) {
+      validateAndUpload(e.target.files[0]);
+    }
+  };
 
-    if (extractedId) {
-      onConnect(extractedId);
+  const validateAndUpload = (file: File) => {
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/csv' // .csv
+    ];
+
+    // Some browsers have different mime types for CSV/Excel, so we also check extension
+    const name = file.name.toLowerCase();
+    const isValidExt = name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv');
+
+    if (isValidExt || validTypes.includes(file.type)) {
+      onFileSelect(file);
     } else {
-      setError("Hmm, ese enlace no parece válido. Asegúrate de copiar la URL completa de tu Google Sheet.");
+      setError("Por favor sube un archivo Excel (.xlsx, .xls) o CSV.");
     }
   };
 
@@ -47,59 +61,68 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onConnect, isLoadi
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 animate-fade-in border border-white/50 backdrop-blur-sm">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner">
-            👋
+          <div className="w-16 h-16 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner transform transition-transform hover:scale-110 duration-500">
+            📂
           </div>
-          <h1 className="text-2xl font-semibold text-calm-800 mb-2">Bienvenido</h1>
+          <h1 className="text-2xl font-semibold text-calm-800 mb-2">Comencemos</h1>
           <p className="text-calm-500 text-sm leading-relaxed">
             {WELCOME_MSG}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="sheetUrl" className="block text-xs font-medium uppercase tracking-wider text-calm-500 ml-1">
-              URL de Google Sheet
-            </label>
-            <input
-              id="sheetUrl"
-              type="text"
-              value={inputVal}
-              onChange={(e) => {
-                setInputVal(e.target.value);
-                setError(null);
-              }}
-              placeholder="https://docs.google.com/spreadsheets/d/..."
-              className={`w-full px-4 py-3 bg-calm-50 border rounded-xl focus:ring-2 focus:ring-primary-100 outline-none transition-all text-calm-800 placeholder:text-calm-400 ${
-                error ? 'border-red-300 focus:border-red-500' : 'border-calm-200 focus:border-primary-500'
-              }`}
-              autoFocus
-            />
-            {error ? (
-               <p className="text-[11px] text-red-500 ml-1 font-medium animate-slide-up">
-                 {error}
-               </p>
-            ) : (
-              <p className="text-[10px] text-calm-400 ml-1">
-                Copia y pega el enlace completo de tu navegador.
+        <div 
+          className={`
+            border-2 border-dashed rounded-2xl p-8 transition-all duration-300 flex flex-col items-center justify-center cursor-pointer min-h-[200px]
+            ${isDragging 
+              ? 'border-primary-500 bg-primary-50 scale-[1.02]' 
+              : 'border-calm-200 hover:border-primary-300 hover:bg-calm-50'
+            }
+          `}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            onChange={handleFileInput}
+            className="hidden"
+            accept=".xlsx, .xls, .csv"
+          />
+          
+          {isLoading ? (
+             <div className="flex flex-col items-center animate-pulse">
+                <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-3"></div>
+                <p className="text-sm font-medium text-calm-600">Procesando archivo...</p>
+             </div>
+          ) : (
+            <>
+              <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 text-2xl text-calm-400">
+                📎
+              </div>
+              <p className="text-sm font-medium text-calm-700 mb-1">
+                Arrastra tu Excel aquí
               </p>
-            )}
-          </div>
+              <p className="text-xs text-calm-400">
+                o haz clic para buscar en tu equipo
+              </p>
+            </>
+          )}
+        </div>
 
-          <Button 
-            type="submit" 
-            className="w-full" 
-            isLoading={isLoading}
-            disabled={!inputVal}
-          >
-            Conectar Hoja
-          </Button>
-        </form>
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 text-red-600 text-xs rounded-lg flex items-center gap-2 animate-slide-up">
+             <span>⚠️</span> {error}
+          </div>
+        )}
+
+        <div className="mt-8 flex justify-center">
+            <p className="text-[10px] text-calm-400 uppercase tracking-widest font-medium">
+                Soporta .XLSX .XLS .CSV
+            </p>
+        </div>
       </div>
-      
-      <p className="mt-8 text-xs text-calm-400 font-medium">
-        Diseñado para humanos, no para robots 🤍
-      </p>
     </div>
   );
 };

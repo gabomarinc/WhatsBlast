@@ -4,50 +4,46 @@ import { DataService } from '../services/dataService';
 import { ColumnMapping } from '../types';
 
 interface ConfigurationScreenProps {
-  sheetId: string;
+  workbook: any;
   availableTabs: string[];
   onConfirm: (tabName: string, mapping: ColumnMapping) => void;
   isLoading: boolean;
 }
 
 export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({ 
-  sheetId, 
+  workbook,
   availableTabs, 
   onConfirm,
   isLoading 
 }) => {
   const [selectedTab, setSelectedTab] = useState(availableTabs[0] || '');
   const [headers, setHeaders] = useState<string[]>([]);
-  const [loadingHeaders, setLoadingHeaders] = useState(false);
   
   // Mapping State
   const [nameCol, setNameCol] = useState('');
   const [phoneCol, setPhoneCol] = useState('');
   
-  // Fetch headers when tab changes
+  // Extract headers when tab changes (Synchronous now)
   useEffect(() => {
-    if (!selectedTab) return;
+    if (!selectedTab || !workbook) return;
     
-    const fetchHeaders = async () => {
-      setLoadingHeaders(true);
-      const res = await DataService.getSheetHeaders(sheetId, selectedTab);
-      if (res.success && res.data) {
-        setHeaders(res.data);
-        autoDetectColumns(res.data);
-      }
-      setLoadingHeaders(false);
-    };
+    const extractedHeaders = DataService.getHeaders(workbook, selectedTab);
+    setHeaders(extractedHeaders);
+    autoDetectColumns(extractedHeaders);
 
-    fetchHeaders();
-  }, [selectedTab, sheetId]);
+  }, [selectedTab, workbook]);
 
   // Logic to guess columns
   const autoDetectColumns = (cols: string[]) => {
     const lowerCols = cols.map(c => c.toLowerCase());
     
+    // Reset selection first
+    setNameCol('');
+    setPhoneCol('');
+
     // Guess Name
     const nameIndex = lowerCols.findIndex(c => 
-      c.includes('nombre') || c.includes('name') || c.includes('cliente') || c.includes('lead')
+      c.includes('nombre') || c.includes('name') || c.includes('cliente') || c.includes('prospecto')
     );
     if (nameIndex >= 0) setNameCol(cols[nameIndex]);
 
@@ -74,9 +70,9 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
           <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4 text-2xl">
             ⚙️
           </div>
-          <h2 className="text-xl font-semibold text-calm-800">Configura tus datos</h2>
+          <h2 className="text-xl font-semibold text-calm-800">Organiza tus datos</h2>
           <p className="text-calm-500 text-sm mt-1">
-            Ayúdanos a entender tu hoja de cálculo.
+            Revisamos tu archivo. Confirma qué columnas usar.
           </p>
         </div>
 
@@ -85,7 +81,7 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
           {/* Tab Selector */}
           <div>
             <label className="block text-xs font-medium uppercase tracking-wider text-calm-500 mb-2">
-              1. Selecciona la pestaña (hoja)
+              1. Selecciona la hoja
             </label>
             <div className="relative">
               <select
@@ -103,14 +99,9 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
             </div>
           </div>
 
-          {loadingHeaders ? (
-            <div className="py-8 text-center text-calm-400 text-sm animate-pulse">
-              Leyendo columnas...
-            </div>
-          ) : (
-            <div className="space-y-4 animate-fade-in">
+          <div className="space-y-4 animate-fade-in">
               <p className="text-xs font-medium uppercase tracking-wider text-calm-500">
-                2. Indica qué columnas usar
+                2. Mapea las columnas
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -144,24 +135,23 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
               {!nameCol || !phoneCol ? (
                 <div className="flex items-center gap-2 p-3 bg-orange-50 text-orange-600 rounded-lg text-xs mt-2">
                   <span>⚠️</span>
-                  Selecciona las columnas de Nombre y Teléfono para continuar.
+                  Necesitamos saber qué columna tiene el nombre y cuál el teléfono.
                 </div>
               ) : (
                  <div className="flex items-center gap-2 p-3 bg-success-50 text-success-600 rounded-lg text-xs mt-2">
                   <span>✅</span>
-                  ¡Todo listo! Usaremos estas columnas.
+                  Columnas identificadas correctamente.
                 </div>
               )}
-            </div>
-          )}
+          </div>
 
           <Button 
             className="w-full mt-4"
-            disabled={!nameCol || !phoneCol || loadingHeaders}
+            disabled={!nameCol || !phoneCol}
             isLoading={isLoading}
             onClick={handleConfirm}
           >
-            Confirmar y Cargar
+            Continuar al Dashboard
           </Button>
 
         </div>

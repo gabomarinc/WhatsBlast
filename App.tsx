@@ -13,7 +13,7 @@ const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
     step: 'connect',
     isLoading: false,
-    sheetId: '',
+    workbook: null,
     sheetTabs: [],
     selectedTab: '',
     mapping: { nameColumn: '', phoneColumn: '' }
@@ -27,11 +27,10 @@ const App: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState<'list' | 'template'>('list');
 
-  // Load initial template
+  // Load initial template from local storage
   useEffect(() => {
-    DataService.getTemplate().then(res => {
-      if(res.success && res.data) setTemplate(res.data);
-    });
+    const tpl = DataService.getTemplate();
+    setTemplate(tpl);
   }, []);
 
   // Calculate Dashboard Metrics
@@ -62,55 +61,55 @@ const App: React.FC = () => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Step 1: Connect -> Get Tabs
-  const handleConnect = async (sheetId: string) => {
+  // Step 1: Upload File -> Parse -> Go to Configure
+  const handleFileSelect = async (file: File) => {
     setState(prev => ({ ...prev, isLoading: true }));
-    try {
-      const res = await DataService.getSheetTabs(sheetId);
-      if (res.success && res.data) {
+    
+    // Artificial small delay for UX so the spinner is visible
+    setTimeout(async () => {
+      const result = await DataService.processFile(file);
+      
+      if (result.success && result.data) {
         setState(prev => ({ 
           ...prev, 
-          step: 'configure', // Move to config step
-          sheetId, 
-          sheetTabs: res.data || [],
+          step: 'configure',
+          workbook: result.data!.workbook,
+          sheetTabs: result.data!.sheets,
           isLoading: false 
         }));
-        addNotification("Hoja conectada. Configura tus datos 🛠", "info");
+        addNotification("Archivo procesado correctamente 📂", "info");
       } else {
-        addNotification(res.error || "No pudimos acceder a la hoja.", "error");
+        addNotification(result.error || "Error al leer archivo", "error");
         setState(prev => ({ ...prev, isLoading: false }));
       }
-    } catch (e) {
-      addNotification("Error de conexión", "error");
-      setState(prev => ({ ...prev, isLoading: false }));
-    }
+    }, 800);
   };
 
-  // Step 2: Configure -> Get Prospects
+  // Step 2: Configure -> Extract Prospects from specific sheet
   const handleConfigurationConfirm = async (tabName: string, mapping: ColumnMapping) => {
+    if (!state.workbook) return;
+
     setState(prev => ({ ...prev, isLoading: true, selectedTab: tabName, mapping }));
     
-    const res = await DataService.getProspects(state.sheetId, tabName, mapping);
-    
-    if (res.success && res.data) {
-      setProspects(res.data);
-      setState(prev => ({ ...prev, step: 'dashboard', isLoading: false }));
-      
-      if (res.data.length === 0) {
-        addNotification("La pestaña parece vacía, pero estamos conectados.", "info");
-      } else {
-        addNotification(`¡Cargamos ${res.data.length} prospectos! 🚀`, "success");
-      }
-    } else {
-      addNotification(res.error || "Error al leer datos", "error");
-      setState(prev => ({ ...prev, isLoading: false }));
-    }
+    // Synchronous operation usually, but kept async pattern if needed later
+    setTimeout(() => {
+        const data = DataService.getProspects(state.workbook, tabName, mapping);
+        
+        setProspects(data);
+        setState(prev => ({ ...prev, step: 'dashboard', isLoading: false }));
+        
+        if (data.length === 0) {
+            addNotification("La hoja seleccionada parece vacía.", "info");
+        } else {
+            addNotification(`¡${data.length} prospectos listos! 🚀`, "success");
+        }
+    }, 500);
   };
 
   const handleSaveTemplate = async (content: string) => {
     setTemplate({ content });
-    await DataService.saveTemplate(content);
-    addNotification("Plantilla guardada correctamente 🎯");
+    DataService.saveTemplate(content);
+    addNotification("Plantilla guardada (Local) 🎯");
   };
 
   const handleSendMessage = (prospect: Prospect) => {
@@ -129,16 +128,10 @@ const App: React.FC = () => {
     // Mark as sent in session
     setSentIds(prev => new Set(prev).add(prospect.id));
 
-    // UX IMPROVEMENT: Use a named window target 'HumanFlowWhatsApp'.
-    // This tells the browser to try and reuse the existing tab/window with this name
-    // instead of opening a new one every time.
+    // UX IMPROVEMENT: Use a named window target
     window.open(url, 'HumanFlowWhatsApp');
     
-    addNotification("Actualizando WhatsApp... 🚀", "success");
-    
-    setTimeout(() => {
-        addNotification("Mensaje listo en la otra pestaña. 💬", "info");
-    }, 1500);
+    addNotification("Abriendo WhatsApp... 🚀", "success");
   };
 
   // --- Views ---
@@ -146,7 +139,7 @@ const App: React.FC = () => {
   if (state.step === 'connect') {
     return (
       <>
-        <ConnectScreen onConnect={handleConnect} isLoading={state.isLoading} />
+        <ConnectScreen onFileSelect={handleFileSelect} isLoading={state.isLoading} />
         <ToastContainer notifications={notifications} removeNotification={removeNotification} />
       </>
     );
@@ -156,7 +149,7 @@ const App: React.FC = () => {
     return (
       <>
         <ConfigurationScreen 
-          sheetId={state.sheetId} 
+          workbook={state.workbook}
           availableTabs={state.sheetTabs}
           isLoading={state.isLoading}
           onConfirm={handleConfigurationConfirm}
@@ -167,8 +160,6 @@ const App: React.FC = () => {
   }
 
   // Dashboard View
-  // Extract ALL variable keys from the first prospect to show structure
-  // We exclude 'id' as it's internal, but keep 'telefono', 'nombre', 'estado' and any custom columns
   const variableKeys = prospects.length > 0 
     ? Object.keys(prospects[0]).filter(k => k !== 'id') 
     : ['nombre', 'empresa', 'telefono'];
@@ -183,8 +174,9 @@ const App: React.FC = () => {
             <span className="font-semibold text-calm-800">{APP_NAME}</span>
           </div>
           <div className="flex flex-col items-end">
-            <div className="text-xs text-calm-400 font-mono bg-calm-50 px-2 py-1 rounded">
-              {state.sheetId.substring(0,6)}... / {state.selectedTab}
+            <div className="text-xs text-calm-400 font-mono bg-calm-50 px-2 py-1 rounded flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-green-400"></span>
+              Archivo Local / {state.selectedTab}
             </div>
           </div>
         </div>
@@ -200,7 +192,7 @@ const App: React.FC = () => {
             contactedTotal={stats.contactedTotal}
         />
 
-        {/* Improved Navigation Tabs (Segmented Control) */}
+        {/* Navigation Tabs */}
         <div className="flex justify-center mb-10 mt-8">
           <div className="bg-calm-100/80 p-1.5 rounded-2xl flex w-full max-w-md shadow-inner border border-calm-200/50 relative">
             
@@ -244,7 +236,7 @@ const App: React.FC = () => {
               {prospects.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-calm-300">
                   <p className="text-calm-500">No hay prospectos cargados.</p>
-                  <p className="text-sm text-calm-400 mt-2">Verifica la pestaña seleccionada en tu Google Sheet.</p>
+                  <p className="text-sm text-calm-400 mt-2">Revisa que tu archivo Excel tenga datos.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
