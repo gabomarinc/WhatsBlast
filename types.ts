@@ -15,18 +15,20 @@ export interface Template {
 export interface ColumnMapping {
   nameColumn: string;
   phoneColumn: string;
-  // Optional columns
-  lastNameColumn?: string;
-  companyColumn?: string;
+  // New configuration arrays
+  visibleColumns: string[];   // Columns to show on the card
+  filterableColumns: string[]; // Columns to create filters for
 }
 
 export interface AppState {
   step: 'connect' | 'configure' | 'dashboard';
   isLoading: boolean;
-  workbook: any | null; // Stores the parsed Excel workbook
-  sheetTabs: string[]; // List of tab names available
+  workbook: any | null; 
+  sheetTabs: string[]; 
   selectedTab: string;
   mapping: ColumnMapping;
+  // Active filters state
+  activeFilters: Record<string, string>; 
 }
 
 export interface Notification {

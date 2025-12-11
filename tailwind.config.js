@@ -27,7 +27,12 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Satoshi', 'Inter', 'system-ui', 'sans-serif'],
+      },
+      fontWeight: {
+        regular: '400',
+        bold: '700',
+        black: '900', // Superbold
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
