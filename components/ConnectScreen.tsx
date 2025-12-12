@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { WELCOME_MSG } from '../constants';
 
 interface ConnectScreenProps {
   onFileSelect: (file: File, email: string, password: string) => void;
