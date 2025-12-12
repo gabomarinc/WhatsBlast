@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { Prospect, User } from '../types';
+import { Prospect, User, UploadRecord } from '../types';
 
 const getEnvVar = (key: string, viteKey: string) => {
   try {
@@ -142,6 +142,7 @@ export const NeonService = {
     if (!sqlMain) return null;
 
     try {
+      // Create Upload Record
       const uploadResult = await sqlMain`
         INSERT INTO uploads (user_email, filename, sheet_name, mapped_config)
         VALUES (${email}, ${filename}, ${sheetName}, ${mapping})
@@ -151,12 +152,17 @@ export const NeonService = {
       const uploadId = uploadResult[0].id;
       const batchSize = 50;
       
+      // Save prospects in batches
       for (let i = 0; i < prospects.length; i += batchSize) {
         const chunk = prospects.slice(i, i + batchSize);
-        await Promise.all(chunk.map(p => sqlMain`
-            INSERT INTO prospects (id, upload_id, user_email, data, status)
-            VALUES (${p.id}, ${uploadId}, ${email}, ${p}, ${p.estado || 'Nuevo'})
-        `));
+        await Promise.all(chunk.map(p => {
+            // Ensure status is synced
+            const status = p.estado || 'Nuevo';
+            return sqlMain`
+                INSERT INTO prospects (id, upload_id, user_email, data, status)
+                VALUES (${p.id}, ${uploadId}, ${email}, ${p}, ${status})
+            `;
+        }));
       }
 
       return uploadId;
@@ -182,10 +188,65 @@ export const NeonService = {
     }
   },
 
-  async getUserHistory(email: string) {
+  // --- RECOVERY METHODS ---
+
+  /**
+   * Gets the list of previous uploads for the dashboard/connect screen
+   */
+  async getUserUploads(email: string): Promise<UploadRecord[]> {
       if (!sqlMain) return [];
-      return await sqlMain`
-        SELECT * FROM uploads WHERE user_email = ${email} ORDER BY created_at DESC LIMIT 5
-      `;
+      try {
+        // We join to count prospects and how many are contacted
+        const result = await sqlMain`
+            SELECT 
+                u.id, 
+                u.filename, 
+                u.sheet_name, 
+                u.created_at,
+                COUNT(p.id) as total_prospects,
+                COUNT(CASE WHEN p.status ILIKE '%contactado%' OR p.status ILIKE '%éxito%' THEN 1 END) as contacted_count
+            FROM uploads u
+            LEFT JOIN prospects p ON u.id = p.upload_id
+            WHERE u.user_email = ${email}
+            GROUP BY u.id
+            ORDER BY u.created_at DESC
+            LIMIT 10
+        `;
+        // @ts-ignore
+        return result.map(r => ({
+            id: r.id,
+            filename: r.filename,
+            sheet_name: r.sheet_name,
+            created_at: r.created_at,
+            total_prospects: Number(r.total_prospects),
+            contacted_count: Number(r.contacted_count)
+        }));
+      } catch (e) {
+          console.error("Error fetching history", e);
+          return [];
+      }
+  },
+
+  /**
+   * Rehydrates a full session from DB
+   */
+  async getSessionProspects(uploadId: number): Promise<{ prospects: Prospect[], mapping: any }> {
+      if (!sqlMain) throw new Error("No DB Connection");
+
+      // 1. Get Mapping Config
+      const uploadRes = await sqlMain`SELECT mapped_config FROM uploads WHERE id = ${uploadId}`;
+      if (uploadRes.length === 0) throw new Error("Upload not found");
+      const mapping = uploadRes[0].mapped_config;
+
+      // 2. Get Prospects (We use the DB status as the source of truth)
+      const prospectsRes = await sqlMain`SELECT data, status FROM prospects WHERE upload_id = ${uploadId}`;
+      
+      const prospects = prospectsRes.map(row => {
+          const p = row.data as Prospect;
+          // Override the JSON state with the indexed DB state which tracks updates
+          return { ...p, estado: row.status };
+      });
+
+      return { prospects, mapping };
   }
 };

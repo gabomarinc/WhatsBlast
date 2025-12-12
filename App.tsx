@@ -8,8 +8,11 @@ import { FilterBar } from './components/FilterBar';
 import { ToastContainer } from './components/Toast';
 import { DataService } from './services/dataService';
 import { NeonService } from './services/neon';
-import { AppState, Notification, Prospect, Template, ColumnMapping } from './types';
+import { AppState, Notification, Prospect, Template, ColumnMapping, User } from './types';
 import { APP_NAME } from './constants';
+import { Button } from './components/Button'; // Added Button for logout
+
+const SESSION_KEY = 'hf_user_session_v1';
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
@@ -31,55 +34,30 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'list' | 'template'>('list');
   const [viewFilter, setViewFilter] = useState<'active' | 'sent'>('active');
 
+  // Load resources and check session on mount
   useEffect(() => {
+    // 1. Load Template
     const tpl = DataService.getTemplate();
     setTemplate(tpl);
     
+    // 2. Check DB Connection
     if (NeonService.isConnected()) {
         NeonService.initSchema().catch(err => {
             console.error("DB Init failed", err);
         });
     }
+
+    // 3. Check LocalStorage Session
+    const savedSession = localStorage.getItem(SESSION_KEY);
+    if (savedSession) {
+      try {
+        const user: User = JSON.parse(savedSession);
+        setState(prev => ({ ...prev, currentUser: user }));
+      } catch (e) {
+        localStorage.removeItem(SESSION_KEY);
+      }
+    }
   }, []);
-
-  const prospectsFilteredByColumns = useMemo(() => {
-    if (Object.keys(state.activeFilters).length === 0) return prospects;
-    return prospects.filter(p => {
-      return Object.entries(state.activeFilters).every(([col, val]) => {
-        if (!val) return true;
-        return String(p[col]) === val;
-      });
-    });
-  }, [prospects, state.activeFilters]);
-
-  const displayProspects = useMemo(() => {
-    return prospectsFilteredByColumns.filter(p => {
-        const status = (p.estado || p['Estado'] || p['status'] || '').toLowerCase();
-        const isDone = sentIds.has(p.id) || 
-                       status.includes('contactado') || 
-                       status.includes('éxito') || 
-                       status.includes('cliente');
-
-        return viewFilter === 'active' ? !isDone : isDone;
-    });
-  }, [prospectsFilteredByColumns, viewFilter, sentIds]);
-
-  const stats = useMemo(() => {
-    const total = prospectsFilteredByColumns.length;
-    const totalDatabase = prospects.length;
-    const sessionSentCount = sentIds.size;
-    
-    const contactedTotal = prospectsFilteredByColumns.filter(p => {
-        const status = (p.estado || '').toLowerCase();
-        const isSheetContacted = status.includes('contactado') || status.includes('éxito') || status.includes('cliente');
-        const isSessionSent = sentIds.has(p.id);
-        return isSheetContacted || isSessionSent;
-    }).length;
-
-    const pending = total - contactedTotal;
-    return { total, pending, sessionSentCount, contactedTotal, totalDatabase };
-  }, [prospectsFilteredByColumns, prospects, sentIds]);
-
 
   const addNotification = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     const id = Date.now().toString();
@@ -90,41 +68,91 @@ const App: React.FC = () => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const handleFileSelect = async (file: File, email: string, password: string) => {
+  const handleLogout = () => {
+    localStorage.removeItem(SESSION_KEY);
+    setState(prev => ({
+      ...prev,
+      currentUser: null,
+      step: 'connect',
+      workbook: null
+    }));
+    addNotification("Sesión cerrada correctamente", "info");
+  };
+
+  const handleResumeSession = async (uploadId: number) => {
+      setState(prev => ({ ...prev, isLoading: true }));
+      try {
+          const { prospects, mapping } = await NeonService.getSessionProspects(uploadId);
+          
+          setProspects(prospects);
+          setState(prev => ({ 
+              ...prev, 
+              isLoading: false, 
+              step: 'dashboard',
+              mapping: mapping as ColumnMapping
+          }));
+          addNotification("Sesión recuperada con éxito ✨", "success");
+      } catch (error) {
+          console.error(error);
+          addNotification("No se pudo recuperar la sesión", "error");
+          setState(prev => ({ ...prev, isLoading: false }));
+      }
+  };
+
+  const handleFileSelect = async (file: File, email?: string, password?: string) => {
     setState(prev => ({ 
       ...prev, 
       isLoading: true, 
-      currentUser: { email },
       currentFilename: file.name 
     }));
     
     let loginSuccess = false;
-    
-    if (NeonService.isAuthConnected()) {
-        try {
-          const fetchedProfile = await NeonService.loginUser(email, password);
-          if (fetchedProfile) {
-            loginSuccess = true;
-            setState(prev => ({ ...prev, currentUser: fetchedProfile }));
-            if (fetchedProfile.name) {
-              addNotification(`¡Hola de nuevo, ${fetchedProfile.name}! 👋`, "success");
-            }
-          } else {
-              addNotification("Credenciales inválidas.", "error");
+    let userToSet = state.currentUser;
+
+    // SCENARIO A: User already logged in (Session exists)
+    if (state.currentUser) {
+        loginSuccess = true;
+    } 
+    // SCENARIO B: New Login attempt
+    else if (email && password) {
+        if (NeonService.isAuthConnected()) {
+            try {
+              const fetchedProfile = await NeonService.loginUser(email, password);
+              if (fetchedProfile) {
+                loginSuccess = true;
+                userToSet = fetchedProfile;
+                
+                // SAVE SESSION
+                localStorage.setItem(SESSION_KEY, JSON.stringify(fetchedProfile));
+                
+                if (fetchedProfile.name) {
+                  addNotification(`¡Hola de nuevo, ${fetchedProfile.name}! 👋`, "success");
+                }
+              } else {
+                  addNotification("Credenciales inválidas.", "error");
+                  setState(prev => ({ ...prev, isLoading: false }));
+                  return;
+              }
+            } catch {
+              addNotification("Error de conexión.", "error");
               setState(prev => ({ ...prev, isLoading: false }));
               return;
-          }
-        } catch {
-          addNotification("Error de conexión.", "error");
-          setState(prev => ({ ...prev, isLoading: false }));
-          return;
+            }
+        } else {
+            // Offline Mode Login
+            loginSuccess = true;
+            userToSet = { email };
+            localStorage.setItem(SESSION_KEY, JSON.stringify(userToSet));
+            addNotification("Modo Offline activado", "info");
         }
-    } else {
-        loginSuccess = true;
-        addNotification("Modo Offline activado", "info");
     }
 
     if (loginSuccess) {
+        // Update user state if it was a new login
+        if (userToSet) {
+             setState(prev => ({ ...prev, currentUser: userToSet }));
+        }
+
         setTimeout(async () => {
           const result = await DataService.processFile(file);
           if (result.success && result.data) {
@@ -142,6 +170,45 @@ const App: React.FC = () => {
         }, 800);
     }
   };
+
+  const prospectsFilteredByColumns = useMemo(() => {
+    if (Object.keys(state.activeFilters).length === 0) return prospects;
+    return prospects.filter(p => {
+      return Object.entries(state.activeFilters).every(([col, val]) => {
+        if (!val) return true;
+        return String(p[col]) === val;
+      });
+    });
+  }, [prospects, state.activeFilters]);
+
+  const displayProspects = useMemo(() => {
+    return prospectsFilteredByColumns.filter(p => {
+        const status = (p.estado || p['Estado'] || p['status'] || '').toLowerCase();
+        const isDone = sentIds.has(p.id) || 
+                       status.includes('contactado') || 
+                       status.includes('éxito') || 
+                       status.includes('cliente') ||
+                       status.includes('ganado');
+
+        return viewFilter === 'active' ? !isDone : isDone;
+    });
+  }, [prospectsFilteredByColumns, viewFilter, sentIds]);
+
+  const stats = useMemo(() => {
+    const total = prospectsFilteredByColumns.length;
+    const totalDatabase = prospects.length;
+    const sessionSentCount = sentIds.size;
+    
+    const contactedTotal = prospectsFilteredByColumns.filter(p => {
+        const status = (p.estado || '').toLowerCase();
+        const isSheetContacted = status.includes('contactado') || status.includes('éxito') || status.includes('cliente') || status.includes('ganado');
+        const isSessionSent = sentIds.has(p.id);
+        return isSheetContacted || isSessionSent;
+    }).length;
+
+    const pending = total - contactedTotal;
+    return { total, pending, sessionSentCount, contactedTotal, totalDatabase };
+  }, [prospectsFilteredByColumns, prospects, sentIds]);
 
   const handleConfigurationConfirm = async (tabName: string, mapping: ColumnMapping) => {
     if (!state.workbook) return;
@@ -211,10 +278,18 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, activeFilters: {} }));
   };
 
+  // --- RENDERING ---
+
   if (state.step === 'connect') {
     return (
       <>
-        <ConnectScreen onFileSelect={handleFileSelect} isLoading={state.isLoading} />
+        <ConnectScreen 
+            onFileSelect={handleFileSelect} 
+            isLoading={state.isLoading} 
+            currentUser={state.currentUser}
+            onLogout={handleLogout}
+            onResume={handleResumeSession}
+        />
         <ToastContainer notifications={notifications} removeNotification={removeNotification} />
       </>
     );
@@ -261,12 +336,19 @@ const App: React.FC = () => {
                 <span className={`w-2 h-2 rounded-full ${NeonService.isConnected() ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                 {NeonService.isConnected() ? 'Conectado' : 'Modo Local'}
              </div>
+             
+             <button 
+                onClick={handleLogout}
+                className="ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-all"
+                title="Cerrar Sesión"
+             >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+             </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-10">
-        
         <div className="mb-12">
             <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Hola, {state.currentUser?.name?.split(' ')[0] || 'Partner'} 👋</h1>
             <p className="text-lg text-slate-500 font-medium max-w-2xl">
@@ -280,9 +362,8 @@ const App: React.FC = () => {
             sentSession={stats.sessionSentCount} 
             contactedTotal={stats.contactedTotal}
         />
-
+        
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 mt-12">
-            {/* View Toggle */}
             <div className="bg-slate-100/80 p-1.5 rounded-2xl flex w-full md:w-auto shadow-inner border border-slate-200/50">
                 <button 
                   onClick={() => setActiveTab('list')}

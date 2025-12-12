@@ -21,6 +21,15 @@ export interface Prospect {
   [key: string]: string | undefined; // For dynamic custom columns
 }
 
+export interface UploadRecord {
+  id: number;
+  filename: string;
+  sheet_name: string;
+  created_at: string;
+  total_prospects?: number;
+  contacted_count?: number; // Calculated field
+}
+
 export interface Template {
   content: string;
 }
