@@ -44,8 +44,9 @@ const App: React.FC = () => {
     if (NeonService.isConnected()) {
         NeonService.initSchema().catch(err => {
             console.error("DB Init failed. Check connection string.", err);
-            // Don't block UI, just log
         });
+    } else {
+      console.log("App starting in offline mode (No DB connection)");
     }
   }, []);
 
@@ -115,25 +116,31 @@ const App: React.FC = () => {
     setState(prev => ({ 
       ...prev, 
       isLoading: true, 
-      currentUser: { email }, // Temp user until fetched
+      currentUser: { email }, // Temp user
       currentFilename: file.name 
     }));
     
-    // Log user in Neon and get full profile
+    // 1. Try to Login to DB first (Async await to ensure user exists before moving on)
+    let userProfile = { email };
+    
     if (NeonService.isConnected()) {
         try {
-          const userProfile = await NeonService.loginUser(email);
-          if (userProfile) {
-            setState(prev => ({ ...prev, currentUser: userProfile }));
-            if (userProfile.name) {
-              addNotification(`¡Hola de nuevo, ${userProfile.name}! 👋`, "success");
+          const fetchedProfile = await NeonService.loginUser(email);
+          if (fetchedProfile) {
+            userProfile = fetchedProfile;
+            setState(prev => ({ ...prev, currentUser: fetchedProfile }));
+            
+            if (fetchedProfile.name) {
+              addNotification(`¡Hola de nuevo, ${fetchedProfile.name}! 👋`, "success");
             }
           }
         } catch(e) {
-          console.error(e);
+          console.error("Login error:", e);
+          addNotification("No se pudo conectar a la base de datos", "error");
         }
     }
 
+    // 2. Process File after login attempt
     setTimeout(async () => {
       const result = await DataService.processFile(file);
       
@@ -146,13 +153,13 @@ const App: React.FC = () => {
           isLoading: false 
         }));
         if (!NeonService.isConnected()) {
-           addNotification("Hola " + email.split('@')[0] + ", archivo cargado 📂", "info");
+           addNotification("Modo Offline: Archivo cargado localmente", "info");
         }
       } else {
         addNotification(result.error || "Error al leer archivo", "error");
         setState(prev => ({ ...prev, isLoading: false }));
       }
-    }, 800);
+    }, 500);
   };
 
   // Step 2: Configure -> Extract Prospects -> SAVE TO NEON -> Go to Dashboard
@@ -168,7 +175,8 @@ const App: React.FC = () => {
     // 2. Persist to Neon DB
     if (NeonService.isConnected() && state.currentUser?.email) {
         try {
-            addNotification("Guardando en base de datos...", "info");
+            addNotification("Sincronizando con base de datos...", "info");
+            
             await NeonService.saveSession(
                 state.currentUser.email,
                 state.currentFilename || 'unknown.xlsx',
@@ -176,13 +184,12 @@ const App: React.FC = () => {
                 mapping,
                 data
             );
-            addNotification("¡Datos sincronizados con Neon! ☁️", "success");
+            
+            addNotification("¡Datos guardados exitosamente! ☁️", "success");
         } catch (e) {
             console.error(e);
-            addNotification("Datos locales (Error guardando en nube)", "error");
+            addNotification("Error al guardar en la nube (Datos locales activos)", "error");
         }
-    } else {
-        if (!NeonService.isConnected()) addNotification("Modo Offline (Sin conexión a Neon)", "info");
     }
 
     setState(prev => ({ ...prev, step: 'dashboard', isLoading: false }));

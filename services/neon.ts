@@ -9,14 +9,13 @@ const getEnvVar = (key: string, viteKey: string) => {
     if (metaEnv[viteKey]) return metaEnv[viteKey];
 
     // 2. Try Injected Process Env (from vite.config.ts define)
-    // We access this directly because Vite replaces 'process.env.KEY' with the string value at build time
     // @ts-ignore
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
       // @ts-ignore
       return process.env[key];
     }
     
-    // 3. Fallback for injected global constant if step 2 accessed the object directly
+    // 3. Fallback
     // @ts-ignore
     return process.env[key];
   } catch (e) {
@@ -26,10 +25,19 @@ const getEnvVar = (key: string, viteKey: string) => {
 
 // 1. MAIN DB (HumanFlow Data - Writes allowed)
 const MAIN_DB_URL = getEnvVar('DATABASE_URL', 'VITE_DATABASE_URL');
+// Debug log to verify connection string presence (hiding credentials)
+if (MAIN_DB_URL) {
+  console.log('🔌 Main DB URL found:', MAIN_DB_URL.split('@')[1] || '...Hidden...');
+} else {
+  console.warn('⚠️ No DATABASE_URL found. App will run in offline mode.');
+}
+
 const sqlMain = MAIN_DB_URL ? neon(MAIN_DB_URL) : null;
 
 // 2. AUTH DB (External Tool - Read Only recommended)
 const AUTH_DB_URL = getEnvVar('AUTH_DATABASE_URL', 'VITE_AUTH_DATABASE_URL');
+if (AUTH_DB_URL) console.log('🔌 Auth DB URL found');
+
 const sqlAuth = AUTH_DB_URL ? neon(AUTH_DB_URL) : null;
 
 export const NeonService = {
@@ -41,14 +49,14 @@ export const NeonService = {
 
   /**
    * Initializes the schema ONLY on the Main DB.
-   * We do NOT touch the schema of the External Auth DB.
    */
   async initSchema() {
     if (!sqlMain) return;
 
     try {
-      // 1. Users Table (Local mirror for Referential Integrity)
-      // We store minimal info here just to link uploads
+      console.log('⚙️ Initializing Schema...');
+      
+      // 1. Users Table
       await sqlMain`
         CREATE TABLE IF NOT EXISTS users (
           email TEXT PRIMARY KEY,
@@ -81,7 +89,7 @@ export const NeonService = {
         )
       `;
 
-      console.log('✅ Main DB Schema Initialized');
+      console.log('✅ Main DB Schema Initialized/Verified');
     } catch (error) {
       console.error('❌ Error initializing Main DB:', error);
     }
@@ -89,17 +97,14 @@ export const NeonService = {
 
   /**
    * Logs a user in using the "Dual Database" strategy.
-   * 1. Checks EXTERNAL DB (AUTH_DATABASE_URL) for rich profile data.
-   * 2. Upserts into LOCAL DB (DATABASE_URL) to ensure we can save files.
    */
   async loginUser(email: string): Promise<User | null> {
     const cleanEmail = email.toLowerCase().trim();
     let finalUser: User = { email: cleanEmail };
 
-    // STEP 1: Fetch from External Auth DB
+    // STEP 1: Fetch from External Auth DB (If available)
     if (sqlAuth) {
       try {
-        // Query the external tool's users table
         const externalUser = await sqlAuth`
             SELECT id, name, logo_url, plan, company_name, role 
             FROM users 
@@ -121,23 +126,27 @@ export const NeonService = {
           };
         }
       } catch (err) {
-        console.warn("⚠️ Could not fetch from Auth DB (Check credentials or Table structure)", err);
+        console.warn("⚠️ Error fetching from Auth DB:", err);
       }
     }
 
-    // STEP 2: Ensure User exists in Main DB (for Foreign Keys)
+    // STEP 2: Ensure User exists in Main DB (Writes)
     if (sqlMain) {
       try {
+        console.log(`💾 Syncing user ${cleanEmail} to Main DB...`);
         await sqlMain`
           INSERT INTO users (email) 
           VALUES (${cleanEmail})
           ON CONFLICT (email) 
           DO UPDATE SET last_seen = CURRENT_TIMESTAMP
         `;
+        console.log("✅ User synced to Main DB");
       } catch (err) {
         console.error("❌ Error syncing user to Main DB", err);
-        return null; // If we can't write to main DB, app won't work
+        // We continue even if write fails, but warn the dev
       }
+    } else {
+        console.warn("⚠️ Main DB not connected. User not saved locally.");
     }
 
     return finalUser;
@@ -147,9 +156,14 @@ export const NeonService = {
    * Saves session to Main DB
    */
   async saveSession(email: string, filename: string, sheetName: string, mapping: any, prospects: Prospect[]) {
-    if (!sqlMain) return null;
+    if (!sqlMain) {
+        console.error("❌ Cannot save session: No Main DB connection.");
+        return null;
+    }
 
     try {
+      console.log(`💾 Saving session for ${email} file: ${filename}`);
+      
       // Create Upload Record
       const uploadResult = await sqlMain`
         INSERT INTO uploads (user_email, filename, sheet_name, mapped_config)
@@ -158,6 +172,7 @@ export const NeonService = {
       `;
       
       const uploadId = uploadResult[0].id;
+      console.log(`✅ Upload record created ID: ${uploadId}`);
 
       // Save Prospects Batch
       const batchSize = 50;
@@ -168,20 +183,17 @@ export const NeonService = {
             VALUES (${p.id}, ${uploadId}, ${email}, ${p}, ${p.estado || 'Nuevo'})
         `));
       }
+      console.log(`✅ ${prospects.length} prospects saved.`);
 
       return uploadId;
     } catch (error) {
-      console.error('Error saving session:', error);
+      console.error('❌ Error saving session to DB:', error);
       throw error;
     }
   },
 
-  /**
-   * Updates prospect status in Main DB
-   */
   async updateProspectStatus(prospectId: string, newStatus: string) {
     if (!sqlMain) return;
-
     try {
       await sqlMain`
           UPDATE prospects 
