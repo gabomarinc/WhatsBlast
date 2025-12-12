@@ -103,36 +103,36 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   const isFormValid = email.length > 0 && password.length > 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#f3f4f6] relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-white relative overflow-hidden">
       {/* Abstract Background Shapes */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-200/30 blur-3xl animate-pulse-soft"></div>
-         <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-200/30 blur-3xl animate-pulse-soft" style={{animationDelay: '1s'}}></div>
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary-50 blur-3xl opacity-60"></div>
+         <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary-100 blur-3xl opacity-40"></div>
       </div>
 
-      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-8 bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 border border-white z-10 overflow-hidden transition-all duration-500">
+      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-12 bg-white rounded-[2.5rem] shadow-2xl shadow-secondary-100 z-10 overflow-hidden border border-secondary-50">
         
         {/* Left Side: Brand & History */}
-        <div className="p-10 flex flex-col justify-center bg-white/40 border-r border-white/50">
+        <div className="p-10 flex flex-col justify-center bg-white">
            <div className="mb-8">
               <img 
                 src={currentUser?.logo_url || "https://konsul.digital/wp-content/uploads/2025/07/Logo-original-e1751717849441.png"}
                 alt="Logo" 
-                className="h-10 w-auto object-contain mb-6"
+                className="h-12 w-auto object-contain mb-8"
               />
-              <h1 className="text-3xl font-black text-slate-800 mb-2 leading-tight tracking-tight">
+              <h1 className="text-4xl font-black text-secondary-800 mb-3 leading-tight tracking-tight">
                 {currentUser ? (
                     <>
-                        ¡Hola, <span className="text-indigo-600">{currentUser.name?.split(' ')[0] || 'Partner'}</span>!
+                        ¡Hola, <span className="text-primary-500">{currentUser.name?.split(' ')[0] || 'Partner'}</span>!
                     </>
                 ) : (
                     <>
                         Tu flujo de ventas,<br />
-                        <span className="text-indigo-600">más humano.</span>
+                        <span className="text-primary-500">más humano.</span>
                     </>
                 )}
               </h1>
-              <p className="text-slate-500 font-medium text-sm leading-relaxed max-w-sm">
+              <p className="text-secondary-400 font-medium text-base leading-relaxed max-w-sm">
                 {currentUser 
                     ? 'Puedes cargar una nueva base de datos o continuar con una campaña anterior.'
                     : 'Conecta tus hojas de cálculo, personaliza tus mensajes y gestiona tus prospectos de WhatsApp.'
@@ -142,16 +142,16 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
            
            {/* HISTORY SECTION - Only visible if logged in */}
            {currentUser && NeonService.isConnected() && (
-             <div className="mt-4 flex-1 animate-slide-up">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Continuar Prospección</h3>
+             <div className="mt-6 flex-1 animate-slide-up">
+                <h3 className="text-xs font-black text-secondary-300 uppercase tracking-widest mb-4">Continuar Prospección</h3>
                 
                 {isLoadingHistory ? (
-                   <div className="space-y-2">
-                      <div className="h-12 bg-slate-100/50 rounded-xl animate-pulse"></div>
-                      <div className="h-12 bg-slate-100/50 rounded-xl animate-pulse"></div>
+                   <div className="space-y-3">
+                      <div className="h-14 bg-secondary-50 rounded-xl animate-pulse"></div>
+                      <div className="h-14 bg-secondary-50 rounded-xl animate-pulse"></div>
                    </div>
                 ) : history.length === 0 ? (
-                   <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-xs text-slate-400 text-center">
+                   <div className="p-6 bg-secondary-50 rounded-xl border border-dashed border-secondary-200 text-sm text-secondary-400 text-center">
                       No hay campañas guardadas aún.
                    </div>
                 ) : (
@@ -164,21 +164,21 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                                key={record.id}
                                onClick={() => onResume && onResume(record.id)}
                                disabled={isLoading}
-                               className="w-full text-left p-3 bg-white hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 rounded-xl transition-all group shadow-sm hover:shadow-md flex items-center justify-between"
+                               className="w-full text-left p-4 bg-white hover:bg-primary-50 border border-secondary-100 hover:border-primary-200 rounded-xl transition-all group shadow-sm hover:shadow-md flex items-center justify-between"
                             >
-                                <div className="flex-1 min-w-0 mr-3">
-                                   <p className="text-sm font-bold text-slate-700 truncate group-hover:text-indigo-700">{record.filename}</p>
-                                   <div className="flex items-center gap-2 mt-1">
-                                      <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">{new Date(record.created_at).toLocaleDateString()}</span>
-                                      <span className="text-[10px] text-slate-400">{record.contacted_count}/{record.total_prospects} contactados</span>
+                                <div className="flex-1 min-w-0 mr-4">
+                                   <p className="text-sm font-bold text-secondary-700 truncate group-hover:text-primary-600">{record.filename}</p>
+                                   <div className="flex items-center gap-2 mt-1.5">
+                                      <span className="text-[10px] text-secondary-400 bg-secondary-50 px-2 py-0.5 rounded border border-secondary-100 font-bold">{new Date(record.created_at).toLocaleDateString()}</span>
+                                      <span className="text-[10px] text-secondary-400 font-medium">{record.contacted_count}/{record.total_prospects} contactados</span>
                                    </div>
                                 </div>
-                                <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
-                                   <svg className="w-10 h-10 transform -rotate-90">
-                                      <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="3" fill="transparent" className="text-slate-100" />
-                                      <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="3" fill="transparent" strokeDasharray={100} strokeDashoffset={100 - percent} className="text-indigo-500 transition-all duration-1000" />
+                                <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+                                   <svg className="w-12 h-12 transform -rotate-90">
+                                      <circle cx="24" cy="24" r="18" stroke="currentColor" strokeWidth="3" fill="transparent" className="text-secondary-100" />
+                                      <circle cx="24" cy="24" r="18" stroke="currentColor" strokeWidth="3" fill="transparent" strokeDasharray={113} strokeDashoffset={113 - (percent * 1.13)} className="text-primary-500 transition-all duration-1000" />
                                    </svg>
-                                   <span className="absolute text-[9px] font-bold text-slate-600">{percent}%</span>
+                                   <span className="absolute text-[10px] font-black text-secondary-600">{percent}%</span>
                                 </div>
                             </button>
                          )
@@ -190,19 +190,19 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
         </div>
 
         {/* Right Side: Action Card */}
-        <div className="p-10 bg-white md:rounded-l-[2.5rem] shadow-lg flex flex-col justify-center relative">
+        <div className="p-10 bg-secondary-50 md:bg-white flex flex-col justify-center relative">
             
-            <div className="mb-6 flex justify-between items-end">
+            <div className="mb-8 flex justify-between items-end">
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 mb-1">
+                    <h2 className="text-xl font-black text-secondary-800 mb-1">
                         {currentUser ? 'Nueva Carga' : 'Acceso'}
                     </h2>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-secondary-400 font-medium">
                         {currentUser ? 'Sube un Excel para iniciar una nueva campaña.' : 'Ingresa tus credenciales para continuar.'}
                     </p>
                 </div>
                 {currentUser && onLogout && (
-                    <button onClick={onLogout} className="text-xs font-bold text-red-500 hover:text-red-700 underline">
+                    <button onClick={onLogout} className="text-xs font-bold text-red-400 hover:text-red-600 underline">
                         Cerrar sesión
                     </button>
                 )}
@@ -210,31 +210,33 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
 
             {/* STATE 1: LOGGED OUT - SHOW LOGIN FORM */}
             {!currentUser && (
-                <div className="space-y-4 mb-8 animate-slide-up">
+                <div className="space-y-5 mb-8 animate-slide-up">
                     <div className="group">
-                        <label className="text-[10px] uppercase font-black tracking-widest text-slate-400 ml-1">Correo Electrónico</label>
+                        <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Correo Electrónico</label>
                         <input 
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1 w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-slate-300 placeholder:font-semibold"
+                            className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all placeholder:text-secondary-300 placeholder:font-semibold"
+                            placeholder="ejemplo@empresa.com"
                         />
                     </div>
                     <div className="group">
-                         <label className="text-[10px] uppercase font-black tracking-widest text-slate-400 ml-1">Contraseña</label>
+                         <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Contraseña</label>
                         <input 
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="mt-1 w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-slate-300 placeholder:font-semibold"
+                            className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all placeholder:text-secondary-300 placeholder:font-semibold"
+                            placeholder="••••••••"
                         />
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-4">
                         <button
                             onClick={handleLoginClick}
                             disabled={isLoading || !isFormValid}
-                            className={`w-full py-4 rounded-xl font-black text-sm transition-all transform active:scale-95 ${isLoading || !isFormValid ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-200'}`}
+                            className={`w-full py-4 rounded-xl font-black text-sm transition-all transform active:scale-[0.98] ${isLoading || !isFormValid ? 'bg-secondary-100 text-secondary-400 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600 shadow-xl shadow-primary-500/30'}`}
                         >
                             {isLoading ? 'Verificando...' : 'Iniciar Sesión →'}
                         </button>
@@ -250,8 +252,8 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={`
-                    relative h-64 rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer overflow-hidden animate-slide-up
-                    ${isDragging ? 'border-indigo-500 bg-indigo-50/50 scale-[1.02]' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}
+                    relative h-72 rounded-3xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer overflow-hidden animate-slide-up
+                    ${isDragging ? 'border-primary-500 bg-primary-50/50 scale-[1.01]' : 'border-secondary-200 hover:border-primary-300 hover:bg-secondary-50'}
                 `}
                 >
                 <input 
@@ -265,18 +267,18 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
 
                 {isLoading ? (
                     <div className="flex flex-col items-center animate-pulse z-10">
-                        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3"></div>
-                        <p className="text-sm font-bold text-indigo-700">Procesando archivo...</p>
+                        <div className="w-14 h-14 border-4 border-primary-100 border-t-primary-500 rounded-full animate-spin mb-4"></div>
+                        <p className="text-sm font-bold text-primary-600">Procesando archivo...</p>
                     </div>
                 ) : (
-                    <div className="z-10 px-6">
-                        <div className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center text-2xl mb-3 shadow-sm transition-all bg-indigo-600 text-white shadow-indigo-200`}>
+                    <div className="z-10 px-8">
+                        <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center text-3xl mb-4 shadow-lg shadow-primary-500/20 transition-all bg-primary-500 text-white`}>
                             📂
                         </div>
-                        <p className="text-sm font-black text-slate-700 mb-1">
+                        <p className="text-base font-black text-secondary-800 mb-1">
                             Sube tu nuevo Excel
                         </p>
-                        <p className="text-xs text-slate-400 font-medium">
+                        <p className="text-xs text-secondary-400 font-bold">
                             Haz clic o arrastra el archivo aquí
                         </p>
                     </div>
@@ -284,15 +286,15 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
 
                 {/* Background Texture for Dropzone */}
                 {!isLoading && (
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#27bea5_1px,transparent_1px)] [background-size:16px_16px]"></div>
                 )}
                 </div>
             )}
 
             {error && (
-              <div className="absolute bottom-4 left-0 w-full px-10">
-                  <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg flex items-center gap-2 animate-slide-up border border-red-100">
-                    <span>⚠️</span> {error}
+              <div className="absolute bottom-6 left-0 w-full px-10">
+                  <div className="p-4 bg-red-50 text-red-500 text-xs font-bold rounded-xl flex items-center gap-3 animate-slide-up border border-red-100 shadow-sm">
+                    <span className="text-lg">⚠️</span> {error}
                   </div>
               </div>
             )}

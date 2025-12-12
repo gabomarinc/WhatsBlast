@@ -6,7 +6,8 @@
 
 body {
   font-family: 'Satoshi', sans-serif;
-  background-color: #f8fafc; /* calm-50 */
+  background-color: #ffffff; /* White background */
+  color: #1c2938; /* Secondary color for text */
 }
 
 /* Custom scrollbar for a cleaner look */
@@ -17,11 +18,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #c5cdd6;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #9aaaba;
 }
 
 /* Utility to hide scrollbar but keep functionality */
@@ -32,6 +33,6 @@ body {
     background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #c5cdd6;
     border-radius: 2px;
 }

@@ -40,7 +40,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   return (
     <div className="mb-8 animate-slide-up">
       <div className="flex items-center justify-between mb-4 px-1">
-        <h3 className="text-xs font-black text-slate-400 tracking-widest uppercase flex items-center gap-2">
+        <h3 className="text-xs font-black text-secondary-400 tracking-widest uppercase flex items-center gap-2">
             <Icons.Filter className="w-4 h-4" />
             Filtrar por columnas
         </h3>
@@ -48,7 +48,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {hasActiveFilters && (
           <button 
             onClick={onClearFilters}
-            className="text-xs text-rose-500 hover:text-rose-700 font-bold hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+            className="text-xs text-red-500 hover:text-red-700 font-bold hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
           >
             Limpiar filtros ✕
           </button>
@@ -62,10 +62,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             return (
               <div key={col} className="relative group">
                 <div className={`
-                    flex items-center pl-4 pr-2 py-1.5 rounded-full border transition-all duration-200 cursor-pointer
+                    flex items-center pl-4 pr-2 py-2 rounded-full border transition-all duration-200 cursor-pointer
                     ${isActive 
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' 
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:shadow-sm'
+                        ? 'bg-secondary-800 border-secondary-800 text-white shadow-md shadow-secondary-200' 
+                        : 'bg-white border-secondary-200 text-secondary-600 hover:border-primary-300 hover:shadow-sm'
                     }
                 `}>
                     <span className="text-xs font-bold mr-2">{col}:</span>
@@ -75,18 +75,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       onChange={(e) => onFilterChange(col, e.target.value)}
                       className={`
                         appearance-none bg-transparent outline-none text-xs font-bold cursor-pointer pr-6 py-1
-                        ${isActive ? 'text-white' : 'text-slate-800'}
+                        ${isActive ? 'text-white' : 'text-secondary-800'}
                       `}
                       style={{ maxWidth: '140px', textOverflow: 'ellipsis' }}
                     >
-                      <option value="" className="text-slate-800">Todos</option>
+                      <option value="" className="text-secondary-800">Todos</option>
                       {filterOptions[col]?.map(val => (
-                        <option key={val} value={val} className="text-slate-800">{val}</option>
+                        <option key={val} value={val} className="text-secondary-800">{val}</option>
                       ))}
                     </select>
                     
                     <div className="pointer-events-none -ml-5 mt-0.5">
-                      <Icons.ChevronDown className={`w-3 h-3 ${isActive ? 'text-indigo-200' : 'text-slate-400'}`} />
+                      <Icons.ChevronDown className={`w-3 h-3 ${isActive ? 'text-secondary-400' : 'text-secondary-400'}`} />
                     </div>
                 </div>
               </div>

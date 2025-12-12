@@ -88,18 +88,18 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
   const availableForExtras = headers.filter(h => h !== nameCol && h !== phoneCol);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="w-full max-w-4xl bg-white p-10 rounded-[2rem] shadow-2xl shadow-slate-200/50 animate-slide-up border border-white/60 backdrop-blur-sm relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+      <div className="w-full max-w-4xl bg-white p-10 rounded-[2.5rem] shadow-2xl shadow-secondary-100/50 animate-slide-up border border-secondary-50 relative overflow-hidden">
         
         {/* Decorative background blur */}
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-500 to-indigo-500"></div>
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-500 to-primary-300"></div>
 
         <div className="text-center mb-10 relative z-10">
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-50 to-slate-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner border border-white">
-            <Icons.Settings className="w-8 h-8 text-calm-700" />
+          <div className="w-16 h-16 bg-gradient-to-br from-primary-50 to-white text-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner border border-secondary-50">
+            <Icons.Settings className="w-8 h-8" />
           </div>
-          <h2 className="text-3xl font-black text-calm-900 tracking-tight">Organiza tus datos</h2>
-          <p className="text-calm-500 mt-2 font-medium">Conecta las columnas de tu Excel con el sistema.</p>
+          <h2 className="text-3xl font-black text-secondary-900 tracking-tight">Organiza tus datos</h2>
+          <p className="text-secondary-500 mt-2 font-medium">Conecta las columnas de tu Excel con el sistema.</p>
         </div>
 
         <div className="space-y-8 relative z-10">
@@ -109,16 +109,16 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
             
             {/* Sheet Select */}
             <div className="group">
-               <label className="block text-[11px] font-black uppercase tracking-widest text-calm-400 mb-2 pl-1">Hoja de trabajo</label>
+               <label className="block text-[11px] font-black uppercase tracking-widest text-secondary-400 mb-2 pl-1">Hoja de trabajo</label>
                <div className="relative">
                  <select
                     value={selectedTab}
                     onChange={(e) => setSelectedTab(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-calm-50 border border-calm-200 rounded-xl text-sm font-bold text-calm-800 appearance-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none transition-all cursor-pointer hover:bg-calm-100"
+                    className="w-full px-4 py-3.5 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 appearance-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none transition-all cursor-pointer hover:bg-white"
                   >
                     {availableTabs.map(tab => <option key={tab} value={tab}>{tab}</option>)}
                   </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-calm-500">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-secondary-400">
                     <Icons.ChevronDown className="w-5 h-5" />
                   </div>
                </div>
@@ -126,17 +126,17 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
 
             {/* Name Column */}
             <div className="group">
-               <label className="block text-[11px] font-black uppercase tracking-widest text-calm-400 mb-2 pl-1">Columna Nombre</label>
+               <label className="block text-[11px] font-black uppercase tracking-widest text-secondary-400 mb-2 pl-1">Columna Nombre</label>
                <div className="relative">
                  <select 
                     value={nameCol}
                     onChange={(e) => setNameCol(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-white border border-calm-200 rounded-xl text-sm font-bold text-calm-800 appearance-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none transition-all cursor-pointer shadow-sm hover:border-primary-300"
+                    className="w-full px-4 py-3.5 bg-white border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 appearance-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none transition-all cursor-pointer shadow-sm hover:border-primary-300"
                   >
                     <option value="">Seleccionar...</option>
                     {headers.map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-calm-500">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-secondary-400">
                     <Icons.ChevronDown className="w-5 h-5" />
                   </div>
                </div>
@@ -144,40 +144,40 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
 
             {/* Phone Column */}
             <div className="group">
-               <label className="block text-[11px] font-black uppercase tracking-widest text-calm-400 mb-2 pl-1">Columna WhatsApp</label>
+               <label className="block text-[11px] font-black uppercase tracking-widest text-secondary-400 mb-2 pl-1">Columna WhatsApp</label>
                <div className="relative">
                  <select 
                     value={phoneCol}
                     onChange={(e) => setPhoneCol(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-white border border-calm-200 rounded-xl text-sm font-bold text-calm-800 appearance-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none transition-all cursor-pointer shadow-sm hover:border-primary-300"
+                    className="w-full px-4 py-3.5 bg-white border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 appearance-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none transition-all cursor-pointer shadow-sm hover:border-primary-300"
                   >
                     <option value="">Seleccionar...</option>
                     {headers.map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-calm-500">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-secondary-400">
                      <Icons.ChevronDown className="w-5 h-5" />
                   </div>
                </div>
             </div>
           </div>
 
-          <div className="w-full h-px bg-gradient-to-r from-transparent via-calm-200 to-transparent"></div>
+          <div className="w-full h-px bg-secondary-100"></div>
 
           {/* 2. Advanced Viz Config */}
           <div className="animate-fade-in">
               <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-5 gap-2">
-                <p className="text-sm font-black uppercase tracking-wider text-calm-600">
+                <p className="text-sm font-black uppercase tracking-wider text-secondary-600">
                   Personaliza tarjetas y filtros
                 </p>
-                <div className="flex items-center gap-2 text-[11px] text-calm-500 font-medium bg-calm-50 px-3 py-1.5 rounded-full border border-calm-100">
+                <div className="flex items-center gap-2 text-[11px] text-secondary-500 font-medium bg-secondary-50 px-3 py-1.5 rounded-full border border-secondary-100">
                   <span>Datos a mostrar <Icons.Eye className="w-3 h-3 inline ml-0.5" /></span>
-                  <span className="text-calm-300">|</span>
+                  <span className="text-secondary-300">|</span>
                   <span>Filtros <Icons.Filter className="w-3 h-3 inline ml-0.5" /></span>
                 </div>
               </div>
 
               {availableForExtras.length === 0 ? (
-                <div className="text-center p-8 bg-calm-50/50 rounded-2xl border border-dashed border-calm-200 text-sm text-calm-400">
+                <div className="text-center p-8 bg-secondary-50/50 rounded-2xl border border-dashed border-secondary-200 text-sm text-secondary-400">
                   No se encontraron columnas adicionales para configurar.
                 </div>
               ) : (
@@ -187,10 +187,10 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
                     const isFil = filterCols.has(h);
                     
                     return (
-                      <div key={h} className="flex items-center justify-between p-4 bg-calm-50/30 rounded-2xl border border-calm-100 hover:border-primary-200 hover:bg-white hover:shadow-lg hover:shadow-primary-100/20 transition-all duration-300 group">
+                      <div key={h} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-secondary-100 hover:border-primary-200 hover:shadow-lg hover:shadow-primary-100/20 transition-all duration-300 group">
                         <div className="flex flex-col overflow-hidden mr-4">
-                           <span className="text-sm font-black text-calm-800 truncate" title={h}>{h}</span>
-                           <span className="text-[10px] text-calm-400 font-medium truncate">Columna Original</span>
+                           <span className="text-sm font-black text-secondary-800 truncate" title={h}>{h}</span>
+                           <span className="text-[10px] text-secondary-400 font-medium truncate">Columna Original</span>
                         </div>
                         
                         <div className="flex gap-2 shrink-0">
@@ -199,8 +199,8 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
                             onClick={() => toggleVisible(h)}
                             className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 ${
                               isVis 
-                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-300 transform scale-105' 
-                                : 'bg-white text-calm-300 hover:text-indigo-400 hover:bg-indigo-50 border border-calm-200'
+                                ? 'bg-primary-500 text-white shadow-md shadow-primary-200 transform scale-105' 
+                                : 'bg-secondary-50 text-secondary-300 hover:text-primary-500 hover:bg-primary-50 border border-secondary-200'
                             }`}
                             title="Mostrar en tarjeta"
                           >
@@ -212,8 +212,8 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
                              onClick={() => toggleFilter(h)}
                              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 ${
                                isFil 
-                                 ? 'bg-teal-500 text-white shadow-md shadow-teal-300 transform scale-105' 
-                                 : 'bg-white text-calm-300 hover:text-teal-400 hover:bg-teal-50 border border-calm-200'
+                                 ? 'bg-secondary-800 text-white shadow-md shadow-secondary-200 transform scale-105' 
+                                 : 'bg-secondary-50 text-secondary-300 hover:text-secondary-800 hover:bg-secondary-100 border border-secondary-200'
                              }`}
                              title="Usar como filtro"
                           >

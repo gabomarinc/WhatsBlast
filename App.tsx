@@ -307,8 +307,8 @@ const App: React.FC = () => {
     : ['nombre', 'telefono'];
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] pb-20 font-sans text-slate-800">
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-30 transition-all duration-300">
+    <div className="min-h-screen bg-white pb-20 font-sans text-secondary-800">
+      <header className="bg-white border-b border-secondary-100 sticky top-0 z-30 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4 group cursor-default">
              <div className="relative">
@@ -318,21 +318,21 @@ const App: React.FC = () => {
                   className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-105"
                 />
              </div>
-             <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
-             <span className="font-black text-slate-800 hidden sm:inline text-xl tracking-tight">
+             <div className="h-8 w-px bg-secondary-200 hidden sm:block"></div>
+             <span className="font-black text-secondary-800 hidden sm:inline text-xl tracking-tight">
                {state.currentUser?.company_name || APP_NAME}
              </span>
           </div>
           
           <div className="flex items-center gap-3">
-             <div className={`px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 ${NeonService.isConnected() ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                <span className={`w-2 h-2 rounded-full ${NeonService.isConnected() ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+             <div className={`px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 ${NeonService.isConnected() ? 'bg-primary-50 text-primary-700 border-primary-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                <span className={`w-2 h-2 rounded-full ${NeonService.isConnected() ? 'bg-primary-500' : 'bg-amber-500'}`}></span>
                 {NeonService.isConnected() ? 'Conectado' : 'Modo Local'}
              </div>
              
              <button 
                 onClick={handleLogout}
-                className="ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-all"
+                className="ml-2 text-secondary-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-all"
                 title="Cerrar Sesión"
              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -343,8 +343,8 @@ const App: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         <div className="mb-12">
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Hola, {state.currentUser?.name?.split(' ')[0] || 'Partner'} 👋</h1>
-            <p className="text-lg text-slate-500 font-medium max-w-2xl">
+            <h1 className="text-4xl font-black text-secondary-900 tracking-tight mb-2">Hola, {state.currentUser?.name?.split(' ')[0] || 'Partner'} 👋</h1>
+            <p className="text-lg text-secondary-500 font-medium max-w-2xl">
                 Hoy es un buen día para crear conexiones significativas. Aquí tienes el pulso de tu prospección.
             </p>
         </div>
@@ -357,13 +357,13 @@ const App: React.FC = () => {
         />
         
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 mt-12">
-            <div className="bg-slate-100/80 p-1.5 rounded-2xl flex w-full md:w-auto shadow-inner border border-slate-200/50">
+            <div className="bg-secondary-50 p-1.5 rounded-2xl flex w-full md:w-auto shadow-inner border border-secondary-100">
                 <button 
                   onClick={() => setActiveTab('list')}
                   className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
                     activeTab === 'list' 
-                      ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-black/5' 
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5' 
+                      : 'text-secondary-500 hover:text-secondary-700'
                   }`}
                 >
                   <span>📋</span> Lista de Contactos
@@ -372,8 +372,8 @@ const App: React.FC = () => {
                   onClick={() => setActiveTab('template')}
                   className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
                     activeTab === 'template' 
-                      ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-black/5' 
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5' 
+                      : 'text-secondary-500 hover:text-secondary-700'
                   }`}
                 >
                   <span>💬</span> Personalizar Mensaje
@@ -384,14 +384,14 @@ const App: React.FC = () => {
         <div className="animate-fade-in min-h-[400px]">
           {activeTab === 'list' && (
             <>
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-white p-4 rounded-2xl border border-secondary-100 shadow-sm">
                  <div className="flex gap-2 w-full sm:w-auto">
                     <button 
                         onClick={() => setViewFilter('active')}
                         className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                             viewFilter === 'active' 
-                            ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100' 
-                            : 'text-slate-400 hover:bg-slate-50'
+                            ? 'bg-primary-50 text-primary-700 ring-1 ring-primary-100' 
+                            : 'text-secondary-400 hover:bg-secondary-50'
                         }`}
                     >
                         Pendientes
@@ -400,15 +400,15 @@ const App: React.FC = () => {
                         onClick={() => setViewFilter('sent')}
                         className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                             viewFilter === 'sent' 
-                            ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' 
-                            : 'text-slate-400 hover:bg-slate-50'
+                            ? 'bg-secondary-50 text-secondary-700 ring-1 ring-secondary-200' 
+                            : 'text-secondary-400 hover:bg-secondary-50'
                         }`}
                     >
                         Historial
                     </button>
                  </div>
                  
-                 <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg">
+                 <span className="text-xs font-bold text-secondary-400 bg-secondary-50 px-3 py-1.5 rounded-lg border border-secondary-100">
                     {displayProspects.length} registros visibles
                  </span>
               </div>
@@ -424,20 +424,20 @@ const App: React.FC = () => {
               )}
 
               {displayProspects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-slate-200">
-                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-3xl mb-4">
+                <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-secondary-200">
+                  <div className="w-16 h-16 bg-secondary-50 rounded-full flex items-center justify-center text-3xl mb-4 text-secondary-300">
                      {viewFilter === 'active' ? '🎉' : '📭'}
                   </div>
-                  <p className="font-black text-xl text-slate-600">
+                  <p className="font-black text-xl text-secondary-600">
                       {viewFilter === 'active' ? '¡Todo limpio!' : 'Nada por aquí aún'}
                   </p>
-                  <p className="text-sm text-slate-400 mt-2 font-medium max-w-xs text-center">
+                  <p className="text-sm text-secondary-400 mt-2 font-medium max-w-xs text-center">
                       {viewFilter === 'active' 
                         ? 'Has gestionado todos los prospectos pendientes bajo estos filtros.' 
                         : 'Tu historial de mensajes enviados aparecerá aquí.'}
                   </p>
                   {Object.keys(state.activeFilters).length > 0 && (
-                     <button onClick={handleClearFilters} className="mt-6 text-indigo-600 text-sm font-bold hover:underline">
+                     <button onClick={handleClearFilters} className="mt-6 text-primary-600 text-sm font-bold hover:underline">
                          Limpiar filtros activos
                      </button>
                   )}

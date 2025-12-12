@@ -8,22 +8,46 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
+          50: '#e9fbf8',
+          100: '#cbf5ed',
+          200: '#9eece0',
+          300: '#69dbc6',
+          400: '#3ac2a8',
+          500: '#27bea5', // USER PRIMARY
+          600: '#1fa890',
+          700: '#1a8674',
+          800: '#176b5d',
+          900: '#16584e',
         },
+        secondary: {
+          50: '#f4f6f7',
+          100: '#e3e6e9',
+          200: '#c5cdd6',
+          300: '#9aaaba',
+          400: '#6f8396',
+          500: '#4e6276',
+          600: '#3b4d60',
+          700: '#2f3d4d',
+          800: '#1c2938', // USER SECONDARY
+          900: '#131c26',
+        },
+        // Mapping 'calm' to the secondary spectrum for consistency in existing classes
         calm: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          500: '#64748b',
-          800: '#1e293b',
+          50: '#f9fafb',
+          100: '#f4f6f7',
+          200: '#e3e6e9',
+          300: '#c5cdd6',
+          400: '#9aaaba',
+          500: '#6f8396',
+          600: '#4e6276',
+          700: '#2f3d4d',
+          800: '#1c2938',
+          900: '#131c26',
         },
         success: {
           50: '#f0fdf4',
-          500: '#22c55e',
-          600: '#16a34a',
+          500: '#27bea5', // Aligning success with primary for a monochromatic feel or keeping green
+          600: '#1fa890',
         }
       },
       fontFamily: {
@@ -32,7 +56,7 @@ export default {
       fontWeight: {
         regular: '400',
         bold: '700',
-        black: '900', // Superbold
+        black: '900',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
