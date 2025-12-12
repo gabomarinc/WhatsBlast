@@ -121,7 +121,6 @@ const App: React.FC = () => {
     }));
     
     // 1. Authenticate against DB (Async await to ensure user exists before moving on)
-    let userProfile = { email };
     let loginSuccess = false;
     
     // Only enforce strict auth if Auth DB is connected, otherwise assume demo/offline
@@ -129,7 +128,6 @@ const App: React.FC = () => {
         try {
           const fetchedProfile = await NeonService.loginUser(email, password);
           if (fetchedProfile) {
-            userProfile = fetchedProfile;
             loginSuccess = true;
             
             setState(prev => ({ ...prev, currentUser: fetchedProfile }));
