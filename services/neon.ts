@@ -18,7 +18,7 @@ const getEnvVar = (key: string, viteKey: string) => {
     // 3. Fallback
     // @ts-ignore
     return process.env[key];
-  } catch (e) {
+  } catch {
     return null;
   }
 };
