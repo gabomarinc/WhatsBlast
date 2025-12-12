@@ -2,19 +2,20 @@ import React, { useState, useRef } from 'react';
 import { WELCOME_MSG } from '../constants';
 
 interface ConnectScreenProps {
-  onFileSelect: (file: File, email: string) => void;
+  onFileSelect: (file: File, email: string, password: string) => void;
   isLoading: boolean;
 }
 
 export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLoading }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!email) return; // Disable drag if no email
+    if (!email || !password) return; // Disable drag if incomplete credentials
     setIsDragging(true);
   };
 
@@ -27,15 +28,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
     setIsDragging(false);
     setError(null);
 
-    if (!email) {
-      setError("Por favor ingresa tu correo primero.");
-      return;
-    }
-    
-    if (!validateEmail(email)) {
-        setError("Ingresa un correo válido.");
-        return;
-    }
+    if (!validateCredentials()) return;
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
@@ -45,13 +38,27 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
-    if (!email || !validateEmail(email)) {
-        setError("Por favor ingresa un correo válido.");
-        return;
-    }
+    if (!validateCredentials()) return;
+
     if (e.target.files && e.target.files.length > 0) {
       validateAndUpload(e.target.files[0]);
     }
+  };
+
+  const validateCredentials = () => {
+    if (!email) {
+      setError("Por favor ingresa tu correo.");
+      return false;
+    }
+    if (!validateEmail(email)) {
+        setError("Ingresa un correo válido.");
+        return false;
+    }
+    if (!password) {
+        setError("Por favor ingresa tu contraseña.");
+        return false;
+    }
+    return true;
   };
 
   const validateEmail = (e: string) => {
@@ -69,23 +76,18 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
     const isValidExt = name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv');
 
     if (isValidExt || validTypes.includes(file.type)) {
-      onFileSelect(file, email);
+      onFileSelect(file, email, password);
     } else {
       setError("Por favor sube un archivo Excel (.xlsx, .xls) o CSV.");
     }
   };
 
   const triggerFileSelect = () => {
-      if (!email) {
-          setError("Ingresa tu correo para comenzar.");
-          return;
-      }
-      if (!validateEmail(email)) {
-          setError("Ingresa un correo válido.");
-          return;
-      }
+      if (!validateCredentials()) return;
       fileInputRef.current?.click();
   }
+
+  const isFormValid = email && password;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-slate-100">
@@ -98,32 +100,46 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
                className="h-20 w-auto object-contain transform transition-transform hover:scale-105 duration-500"
              />
           </div>
-          <h1 className="text-3xl font-black text-calm-800 mb-3 tracking-tight">Comencemos</h1>
+          <h1 className="text-3xl font-black text-calm-800 mb-3 tracking-tight">Bienvenido</h1>
           <p className="text-calm-500 text-base font-normal leading-relaxed">
-            {WELCOME_MSG}
+            Ingresa tus credenciales para conectar.
           </p>
         </div>
 
-        {/* User Identity Input */}
-        <div className="mb-6">
-            <label className="block text-xs font-black uppercase tracking-wider text-calm-400 mb-2 pl-1">Tu Correo Electrónico</label>
-            <input 
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="nombre@empresa.com"
-                className="w-full px-4 py-3 bg-calm-50 border border-calm-200 rounded-xl text-sm font-bold text-calm-800 outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all placeholder:font-medium placeholder:text-calm-300"
-            />
+        {/* Credentials Form */}
+        <div className="space-y-4 mb-8">
+            <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-calm-400 mb-2 pl-1">Correo Electrónico</label>
+                <input 
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nombre@empresa.com"
+                    className="w-full px-4 py-3 bg-calm-50 border border-calm-200 rounded-xl text-sm font-bold text-calm-800 outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all placeholder:font-medium placeholder:text-calm-300"
+                />
+            </div>
+            
+            <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-calm-400 mb-2 pl-1">Contraseña</label>
+                <input 
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 bg-calm-50 border border-calm-200 rounded-xl text-sm font-bold text-calm-800 outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all placeholder:font-medium placeholder:text-calm-300"
+                />
+            </div>
         </div>
 
+        {/* Drag & Drop Area */}
         <div 
           className={`
-            border-2 border-dashed rounded-2xl p-8 transition-all duration-300 flex flex-col items-center justify-center cursor-pointer min-h-[220px] relative
+            border-2 border-dashed rounded-2xl p-6 transition-all duration-300 flex flex-col items-center justify-center cursor-pointer min-h-[200px] relative
             ${isDragging 
               ? 'border-primary-500 bg-primary-50 scale-[1.02]' 
-              : 'border-calm-200 hover:border-primary-300 hover:bg-calm-50'
+              : 'border-calm-200'
             }
-            ${!email ? 'opacity-60 cursor-not-allowed' : ''}
+            ${isFormValid ? 'hover:border-primary-300 hover:bg-calm-50' : 'opacity-50 cursor-not-allowed bg-calm-50/50'}
           `}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -136,24 +152,27 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
             onChange={handleFileInput}
             className="hidden"
             accept=".xlsx, .xls, .csv"
-            disabled={!email}
+            disabled={!isFormValid || isLoading}
           />
           
           {isLoading ? (
              <div className="flex flex-col items-center animate-pulse">
                 <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
-                <p className="text-sm font-bold text-calm-600">Guardando datos...</p>
+                <p className="text-sm font-bold text-calm-600">Verificando y procesando...</p>
              </div>
           ) : (
             <>
-              <div className="w-14 h-14 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 text-3xl text-calm-400">
-                📎
+              <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 text-2xl text-calm-400">
+                {isFormValid ? '🔓' : '🔒'}
               </div>
               <p className="text-base font-black text-calm-700 mb-1">
-                Arrastra tu Excel aquí
+                {isFormValid ? 'Carga tu archivo Excel' : 'Completa el formulario'}
               </p>
-              <p className="text-sm text-calm-400 font-medium">
-                {email ? 'o haz clic para buscar en tu equipo' : 'Ingresa tu correo para activar'}
+              <p className="text-sm text-calm-400 font-medium text-center">
+                {isFormValid 
+                    ? 'Haz clic o arrastra aquí para iniciar sesión' 
+                    : 'Debes ingresar correo y contraseña para desbloquear'
+                }
               </p>
             </>
           )}
@@ -167,7 +186,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
 
         <div className="mt-8 flex justify-center">
             <p className="text-[10px] text-calm-400 uppercase tracking-widest font-black">
-                Tus datos se guardan seguros en Neon
+                Validación segura vía Neon DB
             </p>
         </div>
       </div>

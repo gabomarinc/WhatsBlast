@@ -112,7 +112,7 @@ const App: React.FC = () => {
   };
 
   // Step 1: Login & Upload File -> Parse -> Go to Configure
-  const handleFileSelect = async (file: File, email: string) => {
+  const handleFileSelect = async (file: File, email: string, password: string) => {
     setState(prev => ({ 
       ...prev, 
       isLoading: true, 
@@ -120,46 +120,60 @@ const App: React.FC = () => {
       currentFilename: file.name 
     }));
     
-    // 1. Try to Login to DB first (Async await to ensure user exists before moving on)
+    // 1. Authenticate against DB (Async await to ensure user exists before moving on)
     let userProfile = { email };
+    let loginSuccess = false;
     
-    if (NeonService.isConnected()) {
+    // Only enforce strict auth if Auth DB is connected, otherwise assume demo/offline
+    if (NeonService.isAuthConnected()) {
         try {
-          const fetchedProfile = await NeonService.loginUser(email);
+          const fetchedProfile = await NeonService.loginUser(email, password);
           if (fetchedProfile) {
             userProfile = fetchedProfile;
+            loginSuccess = true;
+            
             setState(prev => ({ ...prev, currentUser: fetchedProfile }));
             
             if (fetchedProfile.name) {
               addNotification(`¡Hola de nuevo, ${fetchedProfile.name}! 👋`, "success");
             }
+          } else {
+              // Explicit failure from DB
+              addNotification("Credenciales inválidas. Acceso denegado.", "error");
+              setState(prev => ({ ...prev, isLoading: false }));
+              return; // STOP EXECUTION
           }
         } catch(e) {
           console.error("Login error:", e);
-          addNotification("No se pudo conectar a la base de datos", "error");
+          addNotification("Error de conexión al servidor de autenticación.", "error");
+          setState(prev => ({ ...prev, isLoading: false }));
+          return; // STOP EXECUTION
         }
+    } else {
+        // Fallback for demo/offline
+        loginSuccess = true;
+        addNotification("Modo Demo/Offline (Sin validación estricta)", "info");
     }
 
-    // 2. Process File after login attempt
-    setTimeout(async () => {
-      const result = await DataService.processFile(file);
-      
-      if (result.success && result.data) {
-        setState(prev => ({ 
-          ...prev, 
-          step: 'configure',
-          workbook: result.data!.workbook,
-          sheetTabs: result.data!.sheets,
-          isLoading: false 
-        }));
-        if (!NeonService.isConnected()) {
-           addNotification("Modo Offline: Archivo cargado localmente", "info");
-        }
-      } else {
-        addNotification(result.error || "Error al leer archivo", "error");
-        setState(prev => ({ ...prev, isLoading: false }));
-      }
-    }, 500);
+    // 2. Process File only if login succeeded
+    if (loginSuccess) {
+        setTimeout(async () => {
+          const result = await DataService.processFile(file);
+          
+          if (result.success && result.data) {
+            setState(prev => ({ 
+              ...prev, 
+              step: 'configure',
+              workbook: result.data!.workbook,
+              sheetTabs: result.data!.sheets,
+              isLoading: false 
+            }));
+          } else {
+            addNotification(result.error || "Error al leer archivo", "error");
+            setState(prev => ({ ...prev, isLoading: false }));
+          }
+        }, 500);
+    }
   };
 
   // Step 2: Configure -> Extract Prospects -> SAVE TO NEON -> Go to Dashboard

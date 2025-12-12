@@ -25,7 +25,6 @@ const getEnvVar = (key: string, viteKey: string) => {
 
 // 1. MAIN DB (HumanFlow Data - Writes allowed)
 const MAIN_DB_URL = getEnvVar('DATABASE_URL', 'VITE_DATABASE_URL');
-// Debug log to verify connection string presence (hiding credentials)
 if (MAIN_DB_URL) {
   console.log('🔌 Main DB URL found:', MAIN_DB_URL.split('@')[1] || '...Hidden...');
 } else {
@@ -46,6 +45,7 @@ export const NeonService = {
    * Checks if MAIN connection is available
    */
   isConnected: () => !!sqlMain,
+  isAuthConnected: () => !!sqlAuth,
 
   /**
    * Initializes the schema ONLY on the Main DB.
@@ -97,24 +97,30 @@ export const NeonService = {
 
   /**
    * Logs a user in using the "Dual Database" strategy.
+   * Requires Password check against AUTH_DATABASE_URL.
    */
-  async loginUser(email: string): Promise<User | null> {
+  async loginUser(email: string, password: string): Promise<User | null> {
     const cleanEmail = email.toLowerCase().trim();
     let finalUser: User = { email: cleanEmail };
+    let isAuthenticated = false;
 
-    // STEP 1: Fetch from External Auth DB (If available)
+    // STEP 1: Validate against External Auth DB
     if (sqlAuth) {
       try {
+        console.log(`🔐 Authenticating ${cleanEmail} against Auth DB...`);
+        // Checking match of email AND password
         const externalUser = await sqlAuth`
             SELECT id, name, logo_url, plan, company_name, role 
             FROM users 
             WHERE email = ${cleanEmail} 
+            AND password = ${password}
             LIMIT 1
         `;
 
         if (externalUser && externalUser.length > 0) {
           const u = externalUser[0];
-          console.log("✅ User found in External DB");
+          console.log("✅ Credentials Validated.");
+          isAuthenticated = true;
           finalUser = {
             ...finalUser,
             id: u.id,
@@ -124,11 +130,23 @@ export const NeonService = {
             company_name: u.company_name,
             role: u.role
           };
+        } else {
+            console.warn("❌ Invalid Credentials or User not found in Auth DB");
+            return null; // Return null to block access
         }
       } catch (err) {
-        console.warn("⚠️ Error fetching from Auth DB:", err);
+        console.error("⚠️ Error checking Auth DB:", err);
+        // If Auth DB is configured but fails (e.g. timeout), we deny access for security
+        return null; 
       }
+    } else {
+        // Fallback: If no Auth DB configured, we act as "Offline/Demo" mode
+        // accepting any email, but logic in App.tsx might restrict this if needed.
+        console.log("ℹ️ No Auth DB configured. Skipping password check (Demo Mode).");
+        isAuthenticated = true;
     }
+
+    if (!isAuthenticated) return null;
 
     // STEP 2: Ensure User exists in Main DB (Writes)
     if (sqlMain) {
@@ -143,10 +161,7 @@ export const NeonService = {
         console.log("✅ User synced to Main DB");
       } catch (err) {
         console.error("❌ Error syncing user to Main DB", err);
-        // We continue even if write fails, but warn the dev
       }
-    } else {
-        console.warn("⚠️ Main DB not connected. User not saved locally.");
     }
 
     return finalUser;
@@ -172,7 +187,6 @@ export const NeonService = {
       `;
       
       const uploadId = uploadResult[0].id;
-      console.log(`✅ Upload record created ID: ${uploadId}`);
 
       // Save Prospects Batch
       const batchSize = 50;
@@ -183,7 +197,6 @@ export const NeonService = {
             VALUES (${p.id}, ${uploadId}, ${email}, ${p}, ${p.estado || 'Nuevo'})
         `));
       }
-      console.log(`✅ ${prospects.length} prospects saved.`);
 
       return uploadId;
     } catch (error) {
