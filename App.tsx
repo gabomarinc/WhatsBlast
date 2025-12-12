@@ -7,6 +7,7 @@ import { DashboardStats } from './components/DashboardStats';
 import { FilterBar } from './components/FilterBar';
 import { ToastContainer } from './components/Toast';
 import { DataService } from './services/dataService';
+import { NeonService } from './services/neon';
 import { AppState, Notification, Prospect, Template, ColumnMapping } from './types';
 import { APP_NAME } from './constants';
 
@@ -18,7 +19,9 @@ const App: React.FC = () => {
     sheetTabs: [],
     selectedTab: '',
     mapping: { nameColumn: '', phoneColumn: '', visibleColumns: [], filterableColumns: [] },
-    activeFilters: {}
+    activeFilters: {},
+    userEmail: '',
+    currentFilename: ''
   });
 
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -36,10 +39,17 @@ const App: React.FC = () => {
   useEffect(() => {
     const tpl = DataService.getTemplate();
     setTemplate(tpl);
+    
+    // Attempt to init DB schema on load
+    if (NeonService.isConnected()) {
+        NeonService.initSchema().catch(err => {
+            console.error("DB Init failed. Check connection string.", err);
+            // Don't block UI, just log
+        });
+    }
   }, []);
 
   // 1. Base Filtering (Column Filters only)
-  // Used for Stats calculations so stats reflect the current "segment" of data being worked on
   const prospectsFilteredByColumns = useMemo(() => {
     if (Object.keys(state.activeFilters).length === 0) return prospects;
 
@@ -53,7 +63,6 @@ const App: React.FC = () => {
   }, [prospects, state.activeFilters]);
 
   // 2. Display Filtering (Active vs Sent)
-  // Used for rendering the cards
   const displayProspects = useMemo(() => {
     return prospectsFilteredByColumns.filter(p => {
         const status = (p.estado || p['Estado'] || p['status'] || '').toLowerCase();
@@ -66,16 +75,14 @@ const App: React.FC = () => {
                        status.includes('ganado');
 
         if (viewFilter === 'active') {
-            // Show only if NOT done
             return !isDone;
         } else {
-            // Show only if DONE
             return isDone;
         }
     });
   }, [prospectsFilteredByColumns, viewFilter, sentIds]);
 
-  // Calculate Dashboard Metrics based on the Base Filter (Column filtered data)
+  // Calculate Dashboard Metrics
   const stats = useMemo(() => {
     const total = prospectsFilteredByColumns.length;
     const totalDatabase = prospects.length;
@@ -103,10 +110,15 @@ const App: React.FC = () => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Step 1: Upload File -> Parse -> Go to Configure
-  const handleFileSelect = async (file: File) => {
-    setState(prev => ({ ...prev, isLoading: true }));
+  // Step 1: Login & Upload File -> Parse -> Go to Configure
+  const handleFileSelect = async (file: File, email: string) => {
+    setState(prev => ({ ...prev, isLoading: true, userEmail: email, currentFilename: file.name }));
     
+    // Log user in Neon
+    if (NeonService.isConnected()) {
+        await NeonService.loginUser(email).catch(console.error);
+    }
+
     setTimeout(async () => {
       const result = await DataService.processFile(file);
       
@@ -118,7 +130,7 @@ const App: React.FC = () => {
           sheetTabs: result.data!.sheets,
           isLoading: false 
         }));
-        addNotification("Archivo procesado correctamente 📂", "info");
+        addNotification("Hola " + email.split('@')[0] + ", archivo cargado 📂", "info");
       } else {
         addNotification(result.error || "Error al leer archivo", "error");
         setState(prev => ({ ...prev, isLoading: false }));
@@ -126,24 +138,37 @@ const App: React.FC = () => {
     }, 800);
   };
 
-  // Step 2: Configure -> Extract Prospects
+  // Step 2: Configure -> Extract Prospects -> SAVE TO NEON -> Go to Dashboard
   const handleConfigurationConfirm = async (tabName: string, mapping: ColumnMapping) => {
     if (!state.workbook) return;
 
     setState(prev => ({ ...prev, isLoading: true, selectedTab: tabName, mapping }));
     
-    setTimeout(() => {
-        const data = DataService.getProspects(state.workbook, tabName, mapping);
-        
-        setProspects(data);
-        setState(prev => ({ ...prev, step: 'dashboard', isLoading: false }));
-        
-        if (data.length === 0) {
-            addNotification("La hoja seleccionada parece vacía.", "info");
-        } else {
-            addNotification(`¡${data.length} prospectos listos! 🚀`, "success");
+    // 1. Extract data locally
+    const data = DataService.getProspects(state.workbook, tabName, mapping);
+    setProspects(data);
+
+    // 2. Persist to Neon DB
+    if (NeonService.isConnected() && state.userEmail) {
+        try {
+            addNotification("Guardando en base de datos...", "info");
+            await NeonService.saveSession(
+                state.userEmail,
+                state.currentFilename || 'unknown.xlsx',
+                tabName,
+                mapping,
+                data
+            );
+            addNotification("¡Datos sincronizados con Neon! ☁️", "success");
+        } catch (e) {
+            console.error(e);
+            addNotification("Datos locales (Error guardando en nube)", "error");
         }
-    }, 500);
+    } else {
+        if (!NeonService.isConnected()) addNotification("Modo Offline (Sin conexión a Neon)", "info");
+    }
+
+    setState(prev => ({ ...prev, step: 'dashboard', isLoading: false }));
   };
 
   const handleSaveTemplate = async (content: string) => {
@@ -155,7 +180,6 @@ const App: React.FC = () => {
   const handleSendMessage = (prospect: Prospect) => {
     let msg = template.content;
     
-    // Replace variables logic
     msg = msg.replace(/{{(.*?)}}/g, (match, p1) => {
       const key = p1.trim();
       const value = prospect[key as keyof Prospect];
@@ -167,6 +191,17 @@ const App: React.FC = () => {
 
     // Mark as sent in session
     setSentIds(prev => new Set(prev).add(prospect.id));
+
+    // Update Status in DB
+    if (NeonService.isConnected()) {
+        NeonService.updateProspectStatus(prospect.id, 'Contactado').catch(err => console.error("Failed to update status in DB", err));
+    }
+
+    // Update local state to reflect change immediately if viewFilter is active
+    setProspects(prev => prev.map(p => {
+        if (p.id === prospect.id) return { ...p, estado: 'Contactado' };
+        return p;
+    }));
 
     window.open(url, 'HumanFlowWhatsApp');
     addNotification("Abriendo WhatsApp... 🚀", "success");
@@ -229,8 +264,8 @@ const App: React.FC = () => {
           </div>
           <div className="flex flex-col items-end">
             <div className="text-xs text-calm-400 font-mono bg-calm-50 px-2 py-1 rounded flex items-center gap-1 font-medium">
-              <span className="w-2 h-2 rounded-full bg-green-400"></span>
-              Archivo Local / {state.selectedTab}
+              <span className={`w-2 h-2 rounded-full ${NeonService.isConnected() ? 'bg-green-400' : 'bg-orange-400'}`}></span>
+              {state.userEmail} / {state.selectedTab}
             </div>
           </div>
         </div>

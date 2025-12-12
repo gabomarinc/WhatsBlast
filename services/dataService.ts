@@ -69,7 +69,7 @@ export const DataService = {
     // Get raw JSON data
     const rawData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
 
-    return rawData.map((row, index) => {
+    return rawData.map((row) => {
       // Extract core fields based on mapping
       const nombre = row[mapping.nameColumn] ? String(row[mapping.nameColumn]).trim() : 'Sin Nombre';
       let telefono = row[mapping.phoneColumn] ? String(row[mapping.phoneColumn]).replace(/[^0-9]/g, '') : '';
@@ -88,11 +88,11 @@ export const DataService = {
         }
       });
       
-      // Try to find status or company smartly if not mapped (or use raw row data)
-      // This spreads all row properties so they can be used as {{variables}}
+      // Use crypto.randomUUID() for DB-safe unique IDs instead of index
+      const uniqueId = crypto.randomUUID();
       
       return {
-        id: `row-${index}`,
+        id: uniqueId,
         nombre,
         telefono,
         // Default standard fields if they match common names in "otherFields", otherwise undefined

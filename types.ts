@@ -1,3 +1,4 @@
+
 export interface Prospect {
   id: string;
   nombre: string;
@@ -28,7 +29,10 @@ export interface AppState {
   selectedTab: string;
   mapping: ColumnMapping;
   // Active filters state
-  activeFilters: Record<string, string>; 
+  activeFilters: Record<string, string>;
+  // User Identity
+  userEmail: string;
+  currentFilename?: string; // Track filename for DB
 }
 
 export interface Notification {
