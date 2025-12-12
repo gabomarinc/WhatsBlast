@@ -1,49 +1,64 @@
 import { neon } from '@neondatabase/serverless';
 import { Prospect, User, UploadRecord } from '../types';
 
-const getEnvVar = (key: string, viteKey: string) => {
-  try {
-    const metaEnv = (import.meta as any).env || {};
-    if (metaEnv[viteKey]) return metaEnv[viteKey];
-
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      // @ts-ignore
-      return process.env[key];
-    }
-    
-    // @ts-ignore
-    return process.env[key];
-  } catch {
-    return null;
+/**
+ * Robust helper to get environment variables in Vite/Vercel environments.
+ * It checks import.meta.env first (Vite standard), then process.env (Vercel/Node).
+ */
+const getEnvVar = (key: string, viteKey: string): string | undefined => {
+  // 1. Check Vite Standard (import.meta.env)
+  // Casting import.meta to any to avoid TS errors if types aren't fully set up for Vite
+  const meta = import.meta as any;
+  if (typeof meta !== 'undefined' && meta.env) {
+    if (meta.env[viteKey]) return meta.env[viteKey];
+    if (meta.env[key]) return meta.env[key];
   }
+
+  // 2. Check Global Process (Node/Vercel injected)
+  // @ts-ignore
+  if (typeof process !== 'undefined' && process.env) {
+    // @ts-ignore
+    if (process.env[viteKey]) return process.env[viteKey];
+    // @ts-ignore
+    if (process.env[key]) return process.env[key];
+  }
+
+  return undefined;
 };
 
+// --- CONFIGURATION ---
+
 const MAIN_DB_URL = getEnvVar('DATABASE_URL', 'VITE_DATABASE_URL');
-if (MAIN_DB_URL) {
-  console.log('🔌 Main DB URL found');
-} else {
-  console.warn('⚠️ No DATABASE_URL found. App will run in offline mode.');
-}
-
-const sqlMain = MAIN_DB_URL ? neon(MAIN_DB_URL) : null;
-
 const AUTH_DB_URL = getEnvVar('AUTH_DATABASE_URL', 'VITE_AUTH_DATABASE_URL');
-if (AUTH_DB_URL) console.log('🔌 Auth DB URL found');
 
+// Debug logs to help user verify connection in browser console
+console.log(`🔌 Main DB Configured: ${!!MAIN_DB_URL}`);
+console.log(`🔐 Auth DB Configured: ${!!AUTH_DB_URL}`);
+
+// Initialize SQL Clients
+const sqlMain = MAIN_DB_URL ? neon(MAIN_DB_URL) : null;
 const sqlAuth = AUTH_DB_URL ? neon(AUTH_DB_URL) : null;
 
 export const NeonService = {
   
+  /** Checks if Main DB (Data) is connected */
   isConnected: () => !!sqlMain,
+
+  /** Checks if Auth DB (Users) is connected */
   isAuthConnected: () => !!sqlAuth,
 
+  /**
+   * Initializes the schema ONLY for the Main Database (Prospects/Uploads).
+   * It assumes the Auth Database schema is managed separately/manually.
+   */
   async initSchema() {
     if (!sqlMain) return;
 
     try {
-      console.log('⚙️ Initializing Schema...');
+      console.log('⚙️ Initializing Main DB Schema...');
       
+      // We keep a local copy of users in Main DB just for referencing/Foreign Keys, 
+      // but the source of truth for login is Auth DB.
       await sqlMain`
         CREATE TABLE IF NOT EXISTS users (
           email TEXT PRIMARY KEY,
@@ -74,12 +89,16 @@ export const NeonService = {
         )
       `;
 
-      console.log('✅ Main DB Schema Initialized/Verified');
+      console.log('✅ Main DB Schema Initialized');
     } catch (error) {
       console.error('❌ Error initializing Main DB:', error);
     }
   },
 
+  /**
+   * Authenticates against the AUTH_DATABASE_URL.
+   * NOTE: The 'users' table must exist in the Auth DB (run SQL manually).
+   */
   async loginUser(email: string, password: string): Promise<User | null> {
     const cleanEmail = email.toLowerCase().trim();
     let finalUser: User = { email: cleanEmail };
@@ -87,7 +106,9 @@ export const NeonService = {
 
     if (sqlAuth) {
       try {
-        console.log(`🔐 Authenticating ${cleanEmail}...`);
+        console.log(`🔐 Checking credentials for ${cleanEmail} in Auth DB...`);
+        
+        // This query assumes the table 'users' exists in your Auth Database
         const externalUser = await sqlAuth`
             SELECT id, name, logo_url, plan, company_name, role 
             FROM users 
@@ -108,22 +129,24 @@ export const NeonService = {
             company_name: u.company_name,
             role: u.role
           };
+          console.log("✅ Login successful");
         } else {
-            console.warn("❌ Login Failed: Invalid Credentials");
-            return null; // Strict Fail
+            console.warn("❌ Login Failed: Invalid Credentials or User not found.");
+            return null; 
         }
       } catch (err) {
-        console.error("⚠️ Auth DB Error:", err);
-        return null; // Strict Fail on Error
+        console.error("⚠️ CRITICAL Auth DB Error:", err);
+        // Important: If table doesn't exist, this error will show in console
+        return null;
       }
     } else {
-        // Fallback for Development ONLY if no AUTH_DB provided
-        console.warn("ℹ️ No AUTH_DB provided. Accepting in demo mode.");
-        isAuthenticated = true;
+        console.error("❌ Fatal: No AUTH_DATABASE_URL provided.");
+        return null;
     }
 
     if (!isAuthenticated) return null;
 
+    // Sync user existence to Main DB for foreign key constraints
     if (sqlMain) {
       try {
         await sqlMain`
@@ -132,8 +155,8 @@ export const NeonService = {
           ON CONFLICT (email) 
           DO UPDATE SET last_seen = CURRENT_TIMESTAMP
         `;
-      } catch {
-        // Ignore sync errors
+      } catch (e) {
+        console.warn("⚠️ Could not sync user to Main DB (Non-critical):", e);
       }
     }
 
@@ -158,7 +181,6 @@ export const NeonService = {
       for (let i = 0; i < prospects.length; i += batchSize) {
         const chunk = prospects.slice(i, i + batchSize);
         await Promise.all(chunk.map(p => {
-            // Ensure status is synced
             const status = p.estado || 'Nuevo';
             return sqlMain`
                 INSERT INTO prospects (id, upload_id, user_email, data, status)
@@ -169,7 +191,7 @@ export const NeonService = {
 
       return uploadId;
     } catch (error) {
-      console.error('❌ Error saving session:', error);
+      console.error('❌ Error saving session to Main DB:', error);
       throw error;
     }
   },
@@ -185,20 +207,16 @@ export const NeonService = {
               data = jsonb_set(data, '{estado}', ${`"${newStatus}"`}) 
           WHERE id = ${prospectId}
       `;
-    } catch {
-       // Silent fail in background
+    } catch (e) {
+       console.error("Error updating status:", e);
     }
   },
 
   // --- RECOVERY METHODS ---
 
-  /**
-   * Gets the list of previous uploads for the dashboard/connect screen
-   */
   async getUserUploads(email: string): Promise<UploadRecord[]> {
       if (!sqlMain) return [];
       try {
-        // We join to count prospects and how many are contacted
         const result = await sqlMain`
             SELECT 
                 u.id, 
@@ -224,28 +242,22 @@ export const NeonService = {
             contacted_count: Number(r.contacted_count)
         }));
       } catch (e) {
-          console.error("Error fetching history", e);
+          console.error("Error fetching history from Main DB:", e);
           return [];
       }
   },
 
-  /**
-   * Rehydrates a full session from DB
-   */
   async getSessionProspects(uploadId: number): Promise<{ prospects: Prospect[], mapping: any }> {
-      if (!sqlMain) throw new Error("No DB Connection");
+      if (!sqlMain) throw new Error("No Main DB Connection");
 
-      // 1. Get Mapping Config
       const uploadRes = await sqlMain`SELECT mapped_config FROM uploads WHERE id = ${uploadId}`;
       if (uploadRes.length === 0) throw new Error("Upload not found");
       const mapping = uploadRes[0].mapped_config;
 
-      // 2. Get Prospects (We use the DB status as the source of truth)
       const prospectsRes = await sqlMain`SELECT data, status FROM prospects WHERE upload_id = ${uploadId}`;
       
       const prospects = prospectsRes.map(row => {
           const p = row.data as Prospect;
-          // Override the JSON state with the indexed DB state which tracks updates
           return { ...p, estado: row.status };
       });
 
