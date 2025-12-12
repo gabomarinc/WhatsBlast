@@ -1,4 +1,16 @@
 
+export interface User {
+  id?: string; // UUID from external DB
+  email: string;
+  name?: string;
+  logo_url?: string;
+  plan?: string;
+  role?: string;
+  company_name?: string;
+  created_at?: string;
+  last_seen?: string;
+}
+
 export interface Prospect {
   id: string;
   nombre: string;
@@ -31,7 +43,7 @@ export interface AppState {
   // Active filters state
   activeFilters: Record<string, string>;
   // User Identity
-  userEmail: string;
+  currentUser: User | null;
   currentFilename?: string; // Track filename for DB
 }
 

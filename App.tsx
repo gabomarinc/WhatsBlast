@@ -20,7 +20,7 @@ const App: React.FC = () => {
     selectedTab: '',
     mapping: { nameColumn: '', phoneColumn: '', visibleColumns: [], filterableColumns: [] },
     activeFilters: {},
-    userEmail: '',
+    currentUser: null,
     currentFilename: ''
   });
 
@@ -112,11 +112,26 @@ const App: React.FC = () => {
 
   // Step 1: Login & Upload File -> Parse -> Go to Configure
   const handleFileSelect = async (file: File, email: string) => {
-    setState(prev => ({ ...prev, isLoading: true, userEmail: email, currentFilename: file.name }));
+    setState(prev => ({ 
+      ...prev, 
+      isLoading: true, 
+      currentUser: { email }, // Temp user until fetched
+      currentFilename: file.name 
+    }));
     
-    // Log user in Neon
+    // Log user in Neon and get full profile
     if (NeonService.isConnected()) {
-        await NeonService.loginUser(email).catch(console.error);
+        try {
+          const userProfile = await NeonService.loginUser(email);
+          if (userProfile) {
+            setState(prev => ({ ...prev, currentUser: userProfile }));
+            if (userProfile.name) {
+              addNotification(`¡Hola de nuevo, ${userProfile.name}! 👋`, "success");
+            }
+          }
+        } catch(e) {
+          console.error(e);
+        }
     }
 
     setTimeout(async () => {
@@ -130,7 +145,9 @@ const App: React.FC = () => {
           sheetTabs: result.data!.sheets,
           isLoading: false 
         }));
-        addNotification("Hola " + email.split('@')[0] + ", archivo cargado 📂", "info");
+        if (!NeonService.isConnected()) {
+           addNotification("Hola " + email.split('@')[0] + ", archivo cargado 📂", "info");
+        }
       } else {
         addNotification(result.error || "Error al leer archivo", "error");
         setState(prev => ({ ...prev, isLoading: false }));
@@ -149,11 +166,11 @@ const App: React.FC = () => {
     setProspects(data);
 
     // 2. Persist to Neon DB
-    if (NeonService.isConnected() && state.userEmail) {
+    if (NeonService.isConnected() && state.currentUser?.email) {
         try {
             addNotification("Guardando en base de datos...", "info");
             await NeonService.saveSession(
-                state.userEmail,
+                state.currentUser.email,
                 state.currentFilename || 'unknown.xlsx',
                 tabName,
                 mapping,
@@ -255,17 +272,24 @@ const App: React.FC = () => {
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
              <img 
-               src="https://konsul.digital/wp-content/uploads/2025/07/Logo-original-e1751717849441.png" 
-               alt="Konsul Logo" 
+               src={state.currentUser?.logo_url || "https://konsul.digital/wp-content/uploads/2025/07/Logo-original-e1751717849441.png"}
+               alt="Logo" 
                className="h-8 w-auto object-contain"
              />
              <div className="h-6 w-px bg-calm-200 mx-1"></div>
-             <span className="font-black text-calm-800 hidden sm:inline text-lg tracking-tight">{APP_NAME}</span>
+             <span className="font-black text-calm-800 hidden sm:inline text-lg tracking-tight">
+               {state.currentUser?.company_name || APP_NAME}
+             </span>
           </div>
           <div className="flex flex-col items-end">
             <div className="text-xs text-calm-400 font-mono bg-calm-50 px-2 py-1 rounded flex items-center gap-1 font-medium">
               <span className={`w-2 h-2 rounded-full ${NeonService.isConnected() ? 'bg-green-400' : 'bg-orange-400'}`}></span>
-              {state.userEmail} / {state.selectedTab}
+              {state.currentUser?.name || state.currentUser?.email}
+              {state.currentUser?.plan && (
+                 <span className="ml-1 px-1 bg-primary-100 text-primary-700 rounded text-[10px] uppercase">
+                   {state.currentUser.plan}
+                 </span>
+              )}
             </div>
           </div>
         </div>
