@@ -117,24 +117,46 @@ export const NeonService = {
     }
 
     try {
-        console.log(`🔐 Authenticating ${cleanEmail} against 'companies' table...`);
+        console.log(`🔐 Authenticating ${cleanEmail}...`);
         
-        // CORRECTED: Query 'companies' table
+        // STEP 1: Find user by email (Case Insensitive using LOWER)
+        // This ensures 'User@Test.com' matches 'user@test.com'
         const companies = await sqlAuth`
             SELECT * 
             FROM companies 
-            WHERE email = ${cleanEmail} 
-            AND password = ${password}
-            LIMIT 1
+            WHERE LOWER(email) = ${cleanEmail}
         `;
 
         if (companies.length === 0) {
-            console.warn("❌ Login Failed: Invalid credentials or company not found.");
+            console.warn(`❌ Login Failed: No account found with email '${cleanEmail}' in table 'companies'.`);
             return null;
         }
 
         const company = companies[0];
         
+        // STEP 2: Verify Password (In Application Layer for debugging)
+        // Convert both to string to be safe against number types in DB
+        const dbPassword = String(company.password || '');
+        const inputPassword = String(password || '');
+
+        if (dbPassword !== inputPassword) {
+            console.group("❌ Login Failed: Password Mismatch");
+            console.log("Email Found:", cleanEmail);
+            console.log("DB Password Length:", dbPassword.length);
+            console.log("Input Password Length:", inputPassword.length);
+            
+            if (dbPassword.trim() !== dbPassword) {
+                console.warn("⚠️ WARNING: Your password in the database has hidden whitespace at start or end.");
+            }
+            if (dbPassword.trim() === inputPassword) {
+                console.warn("⚠️ HINT: It matches if we trim the DB password. Check your DB data.");
+            }
+            console.groupEnd();
+            return null;
+        }
+
+        console.log("✅ Login Successful");
+
         // Map fields to User type
         const userProfile: User = {
             id: company.id,
@@ -163,7 +185,7 @@ export const NeonService = {
         return userProfile;
 
     } catch (err) {
-        console.error("⚠️ Auth DB Error:", err);
+        console.error("⚠️ Auth DB Error (Check console for query details):", err);
         return null;
     }
   },
