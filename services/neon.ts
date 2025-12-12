@@ -97,7 +97,7 @@ export const NeonService = {
 
   /**
    * Authenticates against the AUTH_DATABASE_URL.
-   * NOTE: The 'users' table must exist in the Auth DB (run SQL manually).
+   * NOTE: Queries the 'companies' table.
    */
   async loginUser(email: string, password: string): Promise<User | null> {
     const cleanEmail = email.toLowerCase().trim();
@@ -106,12 +106,13 @@ export const NeonService = {
 
     if (sqlAuth) {
       try {
-        console.log(`🔐 Checking credentials for ${cleanEmail} in Auth DB...`);
+        console.log(`🔐 Checking credentials for ${cleanEmail} in Auth DB (table: companies)...`);
         
-        // This query assumes the table 'users' exists in your Auth Database
+        // CHANGED: Query 'companies' table instead of 'users'
+        // Using SELECT * to handle dynamic schema differences gracefully
         const externalUser = await sqlAuth`
-            SELECT id, name, logo_url, plan, company_name, role 
-            FROM users 
+            SELECT *
+            FROM companies 
             WHERE email = ${cleanEmail} 
             AND password = ${password}
             LIMIT 1
@@ -120,13 +121,18 @@ export const NeonService = {
         if (externalUser && externalUser.length > 0) {
           const u = externalUser[0];
           isAuthenticated = true;
+          
+          // Map DB columns to User object
+          // Priority: u.company_name -> u.name
           finalUser = {
             ...finalUser,
             id: u.id,
-            name: u.name,
+            // If it's a companies table, 'name' is likely the Company Name
+            // We use 'name' as fallback for company_name if the specific column doesn't exist
+            company_name: u.company_name || u.name, 
+            name: u.contact_name || u.name || cleanEmail.split('@')[0], // Try to find a human name, fallback to company name
             logo_url: u.logo_url,
             plan: u.plan,
-            company_name: u.company_name,
             role: u.role
           };
           console.log("✅ Login successful");
@@ -136,7 +142,6 @@ export const NeonService = {
         }
       } catch (err) {
         console.error("⚠️ CRITICAL Auth DB Error:", err);
-        // Important: If table doesn't exist, this error will show in console
         return null;
       }
     } else {
