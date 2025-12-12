@@ -14,7 +14,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!email || !password) return; // Disable drag if incomplete credentials
+    if (!email || !password) return; 
     setIsDragging(true);
   };
 
@@ -46,15 +46,15 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
 
   const validateCredentials = () => {
     if (!email) {
-      setError("Por favor ingresa tu correo.");
+      setError("Por favor identifícate con tu correo.");
       return false;
     }
     if (!validateEmail(email)) {
-        setError("Ingresa un correo válido.");
+        setError("Ese correo no parece válido.");
         return false;
     }
     if (!password) {
-        setError("Por favor ingresa tu contraseña.");
+        setError("Necesitamos tu contraseña para continuar.");
         return false;
     }
     return true;
@@ -66,9 +66,9 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
 
   const validateAndUpload = (file: File) => {
     const validTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-      'application/vnd.ms-excel', // .xls
-      'text/csv' // .csv
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+      'application/vnd.ms-excel', 
+      'text/csv'
     ];
 
     const name = file.name.toLowerCase();
@@ -77,7 +77,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
     if (isValidExt || validTypes.includes(file.type)) {
       onFileSelect(file, email, password);
     } else {
-      setError("Por favor sube un archivo Excel (.xlsx, .xls) o CSV.");
+      setError("Solo entendemos archivos Excel (.xlsx, .xls) o CSV.");
     }
   };
 
@@ -86,107 +86,124 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({ onFileSelect, isLo
       fileInputRef.current?.click();
   }
 
-  const isFormValid = email && password;
+  const isFormValid = email.length > 0 && password.length > 0;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="w-full max-w-md bg-white p-10 rounded-3xl shadow-xl shadow-slate-200/50 animate-fade-in border border-white/50 backdrop-blur-sm">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
-             <img 
-               src="https://konsul.digital/wp-content/uploads/2025/07/Logo-original-e1751717849441.png" 
-               alt="Konsul Logo" 
-               className="h-20 w-auto object-contain transform transition-transform hover:scale-105 duration-500"
-             />
-          </div>
-          <h1 className="text-3xl font-black text-calm-800 mb-3 tracking-tight">Bienvenido</h1>
-          <p className="text-calm-500 text-base font-normal leading-relaxed">
-            Ingresa tus credenciales para conectar.
-          </p>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#f3f4f6] relative overflow-hidden">
+      {/* Abstract Background Shapes */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-200/30 blur-3xl animate-pulse-soft"></div>
+         <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-200/30 blur-3xl animate-pulse-soft" style={{animationDelay: '1s'}}></div>
+      </div>
+
+      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-8 bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 border border-white z-10 overflow-hidden">
+        
+        {/* Left Side: Brand & Welcome */}
+        <div className="p-10 flex flex-col justify-center bg-white/40">
+           <div className="mb-10">
+              <img 
+                src="https://konsul.digital/wp-content/uploads/2025/07/Logo-original-e1751717849441.png" 
+                alt="Konsul Logo" 
+                className="h-12 w-auto object-contain mb-6"
+              />
+              <h1 className="text-4xl font-black text-slate-800 mb-4 leading-tight tracking-tight">
+                Tu flujo de ventas,<br />
+                <span className="text-indigo-600">más humano.</span>
+              </h1>
+              <p className="text-slate-500 font-medium text-lg leading-relaxed">
+                Conecta tus hojas de cálculo, personaliza tus mensajes y gestiona tus prospectos de WhatsApp en un entorno diseñado para la calma y la productividad.
+              </p>
+           </div>
+           
+           <div className="flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> Seguro</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> Rápido</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400"></span> Simple</span>
+           </div>
         </div>
 
-        {/* Credentials Form */}
-        <div className="space-y-4 mb-8">
-            <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-calm-400 mb-2 pl-1">Correo Electrónico</label>
-                <input 
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nombre@empresa.com"
-                    className="w-full px-4 py-3 bg-calm-50 border border-calm-200 rounded-xl text-sm font-bold text-calm-800 outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all placeholder:font-medium placeholder:text-calm-300"
-                />
-            </div>
+        {/* Right Side: Action Card */}
+        <div className="p-10 bg-white md:rounded-l-[2.5rem] shadow-lg flex flex-col justify-center relative">
             
-            <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-calm-400 mb-2 pl-1">Contraseña</label>
-                <input 
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-4 py-3 bg-calm-50 border border-calm-200 rounded-xl text-sm font-bold text-calm-800 outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all placeholder:font-medium placeholder:text-calm-300"
-                />
+            <div className="mb-6">
+                <h2 className="text-xl font-black text-slate-800 mb-1">Acceso</h2>
+                <p className="text-sm text-slate-400">Ingresa tus credenciales para comenzar.</p>
             </div>
-        </div>
 
-        {/* Drag & Drop Area */}
-        <div 
-          className={`
-            border-2 border-dashed rounded-2xl p-6 transition-all duration-300 flex flex-col items-center justify-center cursor-pointer min-h-[200px] relative
-            ${isDragging 
-              ? 'border-primary-500 bg-primary-50 scale-[1.02]' 
-              : 'border-calm-200'
-            }
-            ${isFormValid ? 'hover:border-primary-300 hover:bg-calm-50' : 'opacity-50 cursor-not-allowed bg-calm-50/50'}
-          `}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={triggerFileSelect}
-        >
-          <input 
-            type="file" 
-            ref={fileInputRef}
-            onChange={handleFileInput}
-            className="hidden"
-            accept=".xlsx, .xls, .csv"
-            disabled={!isFormValid || isLoading}
-          />
-          
-          {isLoading ? (
-             <div className="flex flex-col items-center animate-pulse">
-                <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
-                <p className="text-sm font-bold text-calm-600">Verificando y procesando...</p>
-             </div>
-          ) : (
-            <>
-              <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 text-2xl text-calm-400">
-                {isFormValid ? '🔓' : '🔒'}
+            <div className="space-y-4 mb-8">
+                <div className="group">
+                    <input 
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Correo electrónico"
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-slate-300 placeholder:font-semibold"
+                    />
+                </div>
+                <div className="group">
+                    <input 
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Contraseña"
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-slate-300 placeholder:font-semibold"
+                    />
+                </div>
+            </div>
+
+            {/* Drop Zone */}
+            <div 
+              onClick={triggerFileSelect}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`
+                relative h-48 rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer overflow-hidden
+                ${isDragging ? 'border-indigo-500 bg-indigo-50/50 scale-[1.02]' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}
+                ${!isFormValid ? 'opacity-50 cursor-not-allowed grayscale' : ''}
+              `}
+            >
+               <input 
+                 type="file" 
+                 ref={fileInputRef}
+                 onChange={handleFileInput}
+                 className="hidden"
+                 accept=".xlsx, .xls, .csv"
+                 disabled={!isFormValid || isLoading}
+               />
+
+               {isLoading ? (
+                  <div className="flex flex-col items-center animate-pulse z-10">
+                     <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3"></div>
+                     <p className="text-sm font-bold text-indigo-700">Validando datos...</p>
+                  </div>
+               ) : (
+                  <div className="z-10 px-6">
+                     <div className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center text-2xl mb-3 shadow-sm transition-all ${isFormValid ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-slate-200 text-slate-400'}`}>
+                        {isFormValid ? '📂' : '🔒'}
+                     </div>
+                     <p className="text-sm font-black text-slate-700 mb-1">
+                        {isFormValid ? 'Sube tu Excel aquí' : 'Completa el formulario'}
+                     </p>
+                     <p className="text-xs text-slate-400 font-medium">
+                        {isFormValid ? 'Haz clic o arrastra el archivo' : 'Ingresa tus datos para desbloquear'}
+                     </p>
+                  </div>
+               )}
+
+               {/* Background Texture for Dropzone */}
+               {isFormValid && !isLoading && (
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px]"></div>
+               )}
+            </div>
+
+            {error && (
+              <div className="absolute bottom-4 left-0 w-full px-10">
+                  <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg flex items-center gap-2 animate-slide-up border border-red-100">
+                    <span>⚠️</span> {error}
+                  </div>
               </div>
-              <p className="text-base font-black text-calm-700 mb-1">
-                {isFormValid ? 'Carga tu archivo Excel' : 'Completa el formulario'}
-              </p>
-              <p className="text-sm text-calm-400 font-medium text-center">
-                {isFormValid 
-                    ? 'Haz clic o arrastra aquí para iniciar sesión' 
-                    : 'Debes ingresar correo y contraseña para desbloquear'
-                }
-              </p>
-            </>
-          )}
-        </div>
-
-        {error && (
-          <div className="mt-5 p-3 bg-red-50 text-red-600 text-sm font-medium rounded-xl flex items-center gap-2 animate-slide-up border border-red-100">
-             <span>⚠️</span> {error}
-          </div>
-        )}
-
-        <div className="mt-8 flex justify-center">
-            <p className="text-[10px] text-calm-400 uppercase tracking-widest font-black">
-                Validación segura vía Neon DB
-            </p>
+            )}
         </div>
       </div>
     </div>

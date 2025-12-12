@@ -25,37 +25,26 @@ const App: React.FC = () => {
   });
 
   const [prospects, setProspects] = useState<Prospect[]>([]);
-  // Track IDs of prospects messaged during this session
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
-  
   const [template, setTemplate] = useState<Template>({ content: '' });
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState<'list' | 'template'>('list');
-  
-  // New State for Sub-tab in List view
   const [viewFilter, setViewFilter] = useState<'active' | 'sent'>('active');
 
-  // Load initial template from local storage
   useEffect(() => {
     const tpl = DataService.getTemplate();
     setTemplate(tpl);
     
-    // Attempt to init DB schema on load
     if (NeonService.isConnected()) {
         NeonService.initSchema().catch(err => {
-            console.error("DB Init failed. Check connection string.", err);
+            console.error("DB Init failed", err);
         });
-    } else {
-      console.log("App starting in offline mode (No DB connection)");
     }
   }, []);
 
-  // 1. Base Filtering (Column Filters only)
   const prospectsFilteredByColumns = useMemo(() => {
     if (Object.keys(state.activeFilters).length === 0) return prospects;
-
     return prospects.filter(p => {
-      // Check if prospect matches ALL active filters
       return Object.entries(state.activeFilters).every(([col, val]) => {
         if (!val) return true;
         return String(p[col]) === val;
@@ -63,27 +52,18 @@ const App: React.FC = () => {
     });
   }, [prospects, state.activeFilters]);
 
-  // 2. Display Filtering (Active vs Sent)
   const displayProspects = useMemo(() => {
     return prospectsFilteredByColumns.filter(p => {
         const status = (p.estado || p['Estado'] || p['status'] || '').toLowerCase();
-        
-        // Define what constitutes "Done/Sent"
         const isDone = sentIds.has(p.id) || 
                        status.includes('contactado') || 
                        status.includes('éxito') || 
-                       status.includes('cliente') || 
-                       status.includes('ganado');
+                       status.includes('cliente');
 
-        if (viewFilter === 'active') {
-            return !isDone;
-        } else {
-            return isDone;
-        }
+        return viewFilter === 'active' ? !isDone : isDone;
     });
   }, [prospectsFilteredByColumns, viewFilter, sentIds]);
 
-  // Calculate Dashboard Metrics
   const stats = useMemo(() => {
     const total = prospectsFilteredByColumns.length;
     const totalDatabase = prospects.length;
@@ -97,7 +77,6 @@ const App: React.FC = () => {
     }).length;
 
     const pending = total - contactedTotal;
-
     return { total, pending, sessionSentCount, contactedTotal, totalDatabase };
   }, [prospectsFilteredByColumns, prospects, sentIds]);
 
@@ -111,53 +90,43 @@ const App: React.FC = () => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Step 1: Login & Upload File -> Parse -> Go to Configure
   const handleFileSelect = async (file: File, email: string, password: string) => {
     setState(prev => ({ 
       ...prev, 
       isLoading: true, 
-      currentUser: { email }, // Temp user
+      currentUser: { email },
       currentFilename: file.name 
     }));
     
-    // 1. Authenticate against DB (Async await to ensure user exists before moving on)
     let loginSuccess = false;
     
-    // Only enforce strict auth if Auth DB is connected, otherwise assume demo/offline
     if (NeonService.isAuthConnected()) {
         try {
           const fetchedProfile = await NeonService.loginUser(email, password);
           if (fetchedProfile) {
             loginSuccess = true;
-            
             setState(prev => ({ ...prev, currentUser: fetchedProfile }));
-            
             if (fetchedProfile.name) {
               addNotification(`¡Hola de nuevo, ${fetchedProfile.name}! 👋`, "success");
             }
           } else {
-              // Explicit failure from DB
-              addNotification("Credenciales inválidas. Acceso denegado.", "error");
+              addNotification("Credenciales inválidas.", "error");
               setState(prev => ({ ...prev, isLoading: false }));
-              return; // STOP EXECUTION
+              return;
           }
-        } catch(e) {
-          console.error("Login error:", e);
-          addNotification("Error de conexión al servidor de autenticación.", "error");
+        } catch {
+          addNotification("Error de conexión.", "error");
           setState(prev => ({ ...prev, isLoading: false }));
-          return; // STOP EXECUTION
+          return;
         }
     } else {
-        // Fallback for demo/offline
         loginSuccess = true;
-        addNotification("Modo Demo/Offline (Sin validación estricta)", "info");
+        addNotification("Modo Offline activado", "info");
     }
 
-    // 2. Process File only if login succeeded
     if (loginSuccess) {
         setTimeout(async () => {
           const result = await DataService.processFile(file);
-          
           if (result.success && result.data) {
             setState(prev => ({ 
               ...prev, 
@@ -170,25 +139,19 @@ const App: React.FC = () => {
             addNotification(result.error || "Error al leer archivo", "error");
             setState(prev => ({ ...prev, isLoading: false }));
           }
-        }, 500);
+        }, 800);
     }
   };
 
-  // Step 2: Configure -> Extract Prospects -> SAVE TO NEON -> Go to Dashboard
   const handleConfigurationConfirm = async (tabName: string, mapping: ColumnMapping) => {
     if (!state.workbook) return;
-
     setState(prev => ({ ...prev, isLoading: true, selectedTab: tabName, mapping }));
     
-    // 1. Extract data locally
     const data = DataService.getProspects(state.workbook, tabName, mapping);
     setProspects(data);
 
-    // 2. Persist to Neon DB
     if (NeonService.isConnected() && state.currentUser?.email) {
         try {
-            addNotification("Sincronizando con base de datos...", "info");
-            
             await NeonService.saveSession(
                 state.currentUser.email,
                 state.currentFilename || 'unknown.xlsx',
@@ -196,11 +159,9 @@ const App: React.FC = () => {
                 mapping,
                 data
             );
-            
-            addNotification("¡Datos guardados exitosamente! ☁️", "success");
-        } catch (e) {
-            console.error(e);
-            addNotification("Error al guardar en la nube (Datos locales activos)", "error");
+            addNotification("Datos sincronizados ☁️", "success");
+        } catch {
+            addNotification("Guardado local (Sin conexión)", "info");
         }
     }
 
@@ -210,7 +171,7 @@ const App: React.FC = () => {
   const handleSaveTemplate = async (content: string) => {
     setTemplate({ content });
     DataService.saveTemplate(content);
-    addNotification("Plantilla guardada (Local) 🎯");
+    addNotification("Mensaje actualizado ✍️");
   };
 
   const handleSendMessage = (prospect: Prospect) => {
@@ -225,22 +186,18 @@ const App: React.FC = () => {
     const encodedMsg = encodeURIComponent(msg);
     const url = `https://wa.me/${prospect.telefono}?text=${encodedMsg}`;
 
-    // Mark as sent in session
     setSentIds(prev => new Set(prev).add(prospect.id));
 
-    // Update Status in DB
     if (NeonService.isConnected()) {
-        NeonService.updateProspectStatus(prospect.id, 'Contactado').catch(err => console.error("Failed to update status in DB", err));
+        NeonService.updateProspectStatus(prospect.id, 'Contactado').catch(() => {});
     }
 
-    // Update local state to reflect change immediately if viewFilter is active
     setProspects(prev => prev.map(p => {
         if (p.id === prospect.id) return { ...p, estado: 'Contactado' };
         return p;
     }));
 
     window.open(url, 'HumanFlowWhatsApp');
-    addNotification("Abriendo WhatsApp... 🚀", "success");
   };
 
   const handleFilterChange = (col: string, val: string) => {
@@ -253,8 +210,6 @@ const App: React.FC = () => {
   const handleClearFilters = () => {
     setState(prev => ({ ...prev, activeFilters: {} }));
   };
-
-  // --- Views ---
 
   if (state.step === 'connect') {
     return (
@@ -279,43 +234,46 @@ const App: React.FC = () => {
     );
   }
 
-  // Dashboard View
   const variableKeys = prospects.length > 0 
     ? Object.keys(prospects[0]).filter(k => k !== 'id') 
     : ['nombre', 'telefono'];
 
   return (
-    <div className="min-h-screen bg-calm-50 pb-20">
-      {/* Header */}
-      <header className="bg-white border-b border-calm-200 sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-             <img 
-               src={state.currentUser?.logo_url || "https://konsul.digital/wp-content/uploads/2025/07/Logo-original-e1751717849441.png"}
-               alt="Logo" 
-               className="h-8 w-auto object-contain"
-             />
-             <div className="h-6 w-px bg-calm-200 mx-1"></div>
-             <span className="font-black text-calm-800 hidden sm:inline text-lg tracking-tight">
+    <div className="min-h-screen bg-[#FDFDFD] pb-20 font-sans text-slate-800">
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-30 transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4 group cursor-default">
+             <div className="relative">
+                <img 
+                  src={state.currentUser?.logo_url || "https://konsul.digital/wp-content/uploads/2025/07/Logo-original-e1751717849441.png"}
+                  alt="Logo" 
+                  className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-105"
+                />
+             </div>
+             <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
+             <span className="font-black text-slate-800 hidden sm:inline text-xl tracking-tight">
                {state.currentUser?.company_name || APP_NAME}
              </span>
           </div>
-          <div className="flex flex-col items-end">
-            <div className="text-xs text-calm-400 font-mono bg-calm-50 px-2 py-1 rounded flex items-center gap-1 font-medium">
-              <span className={`w-2 h-2 rounded-full ${NeonService.isConnected() ? 'bg-green-400' : 'bg-orange-400'}`}></span>
-              {state.currentUser?.name || state.currentUser?.email}
-              {state.currentUser?.plan && (
-                 <span className="ml-1 px-1 bg-primary-100 text-primary-700 rounded text-[10px] uppercase">
-                   {state.currentUser.plan}
-                 </span>
-              )}
-            </div>
+          
+          <div className="flex items-center gap-3">
+             <div className={`px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 ${NeonService.isConnected() ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                <span className={`w-2 h-2 rounded-full ${NeonService.isConnected() ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                {NeonService.isConnected() ? 'Conectado' : 'Modo Local'}
+             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-10">
         
+        <div className="mb-12">
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Hola, {state.currentUser?.name?.split(' ')[0] || 'Partner'} 👋</h1>
+            <p className="text-lg text-slate-500 font-medium max-w-2xl">
+                Hoy es un buen día para crear conexiones significativas. Aquí tienes el pulso de tu prospección.
+            </p>
+        </div>
+
         <DashboardStats 
             total={stats.total} 
             pending={stats.pending} 
@@ -323,77 +281,64 @@ const App: React.FC = () => {
             contactedTotal={stats.contactedTotal}
         />
 
-        {/* Navigation Tabs (Main) */}
-        <div className="flex justify-center mb-10 mt-8">
-          <div className="bg-calm-100/80 p-1.5 rounded-2xl flex w-full max-w-md shadow-inner border border-calm-200/50 relative">
-            
-            <button 
-              onClick={() => setActiveTab('list')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-black transition-all duration-300 ${
-                activeTab === 'list' 
-                  ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5 transform scale-[1.02]' 
-                  : 'text-calm-500 hover:text-calm-700 hover:bg-calm-200/50'
-              }`}
-            >
-              <svg className={`w-4 h-4 ${activeTab === 'list' ? 'fill-current' : 'fill-none stroke-current'}`} viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              Lista ({activeTab === 'list' && viewFilter === 'active' ? stats.pending : stats.contactedTotal})
-            </button>
-            
-            <button 
-              onClick={() => setActiveTab('template')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-black transition-all duration-300 ${
-                activeTab === 'template' 
-                  ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5 transform scale-[1.02]' 
-                  : 'text-calm-500 hover:text-calm-700 hover:bg-calm-200/50'
-              }`}
-            >
-              <svg className={`w-4 h-4 ${activeTab === 'template' ? 'fill-current' : 'fill-none stroke-current'}`} viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Editar Mensaje
-            </button>
-
-          </div>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 mt-12">
+            {/* View Toggle */}
+            <div className="bg-slate-100/80 p-1.5 rounded-2xl flex w-full md:w-auto shadow-inner border border-slate-200/50">
+                <button 
+                  onClick={() => setActiveTab('list')}
+                  className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
+                    activeTab === 'list' 
+                      ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-black/5' 
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <span>📋</span> Lista de Contactos
+                </button>
+                <button 
+                  onClick={() => setActiveTab('template')}
+                  className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
+                    activeTab === 'template' 
+                      ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-black/5' 
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <span>💬</span> Personalizar Mensaje
+                </button>
+            </div>
         </div>
 
-        {/* Content Area */}
-        <div className="animate-fade-in">
+        <div className="animate-fade-in min-h-[400px]">
           {activeTab === 'list' && (
             <>
-              {/* Active/Sent Sub-Filters Toggle */}
-              <div className="flex items-center gap-4 mb-6">
-                 <div className="flex p-1 bg-calm-100 rounded-xl">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                 <div className="flex gap-2 w-full sm:w-auto">
                     <button 
                         onClick={() => setViewFilter('active')}
-                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all duration-200 ${
+                        className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                             viewFilter === 'active' 
-                            ? 'bg-white text-calm-800 shadow-sm' 
-                            : 'text-calm-400 hover:text-calm-600'
+                            ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100' 
+                            : 'text-slate-400 hover:bg-slate-50'
                         }`}
                     >
                         Pendientes
                     </button>
                     <button 
                         onClick={() => setViewFilter('sent')}
-                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all duration-200 ${
+                        className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                             viewFilter === 'sent' 
-                            ? 'bg-white text-success-600 shadow-sm' 
-                            : 'text-calm-400 hover:text-calm-600'
+                            ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' 
+                            : 'text-slate-400 hover:bg-slate-50'
                         }`}
                     >
-                        Enviados / Historial
+                        Historial
                     </button>
                  </div>
                  
-                 {/* Count Badge */}
-                 <span className="text-xs font-bold text-calm-400 bg-white px-3 py-1.5 rounded-lg border border-calm-100">
-                    Mostrando: {displayProspects.length}
+                 <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg">
+                    {displayProspects.length} registros visibles
                  </span>
               </div>
 
-              {/* Dynamic Filter Bar */}
               {state.mapping.filterableColumns.length > 0 && (
                 <FilterBar 
                   columns={state.mapping.filterableColumns}
@@ -405,18 +350,21 @@ const App: React.FC = () => {
               )}
 
               {displayProspects.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-calm-300">
-                  <p className="font-black text-xl text-calm-500">
-                      {viewFilter === 'active' ? '¡Estás al día! 🎉' : 'Aún no hay mensajes enviados.'}
+                <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-slate-200">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-3xl mb-4">
+                     {viewFilter === 'active' ? '🎉' : '📭'}
+                  </div>
+                  <p className="font-black text-xl text-slate-600">
+                      {viewFilter === 'active' ? '¡Todo limpio!' : 'Nada por aquí aún'}
                   </p>
-                  <p className="text-sm text-calm-400 mt-2 font-medium">
+                  <p className="text-sm text-slate-400 mt-2 font-medium max-w-xs text-center">
                       {viewFilter === 'active' 
-                        ? 'No hay prospectos pendientes con los filtros actuales.' 
-                        : 'Comienza a contactar para ver tu historial aquí.'}
+                        ? 'Has gestionado todos los prospectos pendientes bajo estos filtros.' 
+                        : 'Tu historial de mensajes enviados aparecerá aquí.'}
                   </p>
                   {Object.keys(state.activeFilters).length > 0 && (
-                     <button onClick={handleClearFilters} className="mt-4 text-primary-600 text-sm font-bold hover:underline">
-                         Limpiar filtros de columnas
+                     <button onClick={handleClearFilters} className="mt-6 text-indigo-600 text-sm font-bold hover:underline">
+                         Limpiar filtros activos
                      </button>
                   )}
                 </div>
@@ -437,7 +385,7 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'template' && (
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-5xl mx-auto pt-4">
               <TemplateEditor 
                 initialTemplate={template.content} 
                 onSave={handleSaveTemplate}

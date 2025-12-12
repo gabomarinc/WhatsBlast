@@ -18,18 +18,15 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onClearFilters
 }) => {
   
-  // Calculate unique values for each filterable column
   const filterOptions = useMemo(() => {
     const options: Record<string, string[]> = {};
     
     columns.forEach(col => {
-      // Get all values, trim whitespace, filter empty
       const values = prospects
         .map(p => p[col])
         .filter(v => v !== undefined && v !== null && String(v).trim() !== '')
         .map(v => String(v));
       
-      // Unique values sorted
       options[col] = (Array.from(new Set(values)) as string[]).sort();
     });
     
@@ -42,21 +39,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
   return (
     <div className="mb-8 animate-slide-up">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600">
-                <Icons.Filter className="w-5 h-5" />
-            </div>
-            <h3 className="text-sm font-black text-calm-800 tracking-wide uppercase">Filtros Activos</h3>
-        </div>
+      <div className="flex items-center justify-between mb-4 px-1">
+        <h3 className="text-xs font-black text-slate-400 tracking-widest uppercase flex items-center gap-2">
+            <Icons.Filter className="w-4 h-4" />
+            Filtrar por columnas
+        </h3>
         
         {hasActiveFilters && (
           <button 
             onClick={onClearFilters}
-            className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 font-bold hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+            className="text-xs text-rose-500 hover:text-rose-700 font-bold hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
           >
-            <span>Limpiar todo</span>
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+            Limpiar filtros ✕
           </button>
         )}
       </div>
@@ -68,31 +62,31 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             return (
               <div key={col} className="relative group">
                 <div className={`
-                    flex items-center h-10 rounded-xl border transition-all duration-200 overflow-hidden relative
+                    flex items-center pl-4 pr-2 py-1.5 rounded-full border transition-all duration-200 cursor-pointer
                     ${isActive 
-                        ? 'bg-primary-50 border-primary-200 shadow-sm' 
-                        : 'bg-white border-calm-200 hover:border-calm-300'
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' 
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:shadow-sm'
                     }
                 `}>
-                    <div className={`px-3 py-2 text-xs font-black uppercase tracking-wider border-r ${isActive ? 'text-primary-700 border-primary-100' : 'text-calm-500 border-calm-100'}`}>
-                        {col}
-                    </div>
+                    <span className="text-xs font-bold mr-2">{col}:</span>
+                    
                     <select
                       value={activeFilters[col] || ''}
                       onChange={(e) => onFilterChange(col, e.target.value)}
                       className={`
-                        appearance-none pl-3 pr-9 py-2 text-xs font-bold bg-transparent outline-none cursor-pointer min-w-[120px]
-                        ${isActive ? 'text-primary-800' : 'text-calm-700'}
+                        appearance-none bg-transparent outline-none text-xs font-bold cursor-pointer pr-6 py-1
+                        ${isActive ? 'text-white' : 'text-slate-800'}
                       `}
+                      style={{ maxWidth: '140px', textOverflow: 'ellipsis' }}
                     >
-                      <option value="">Todos</option>
+                      <option value="" className="text-slate-800">Todos</option>
                       {filterOptions[col]?.map(val => (
-                        <option key={val} value={val}>{val}</option>
+                        <option key={val} value={val} className="text-slate-800">{val}</option>
                       ))}
                     </select>
                     
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-calm-400">
-                      <Icons.ChevronDown className="w-3.5 h-3.5" />
+                    <div className="pointer-events-none -ml-5 mt-0.5">
+                      <Icons.ChevronDown className={`w-3 h-3 ${isActive ? 'text-indigo-200' : 'text-slate-400'}`} />
                     </div>
                 </div>
               </div>

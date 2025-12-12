@@ -1,21 +1,17 @@
 import { neon } from '@neondatabase/serverless';
 import { Prospect, User } from '../types';
 
-// Helper to safely get environment variables from either VITE_ prefix or injected process.env
 const getEnvVar = (key: string, viteKey: string) => {
   try {
-    // 1. Try standard Vite Environment Variable (import.meta.env)
     const metaEnv = (import.meta as any).env || {};
     if (metaEnv[viteKey]) return metaEnv[viteKey];
 
-    // 2. Try Injected Process Env (from vite.config.ts define)
     // @ts-ignore
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
       // @ts-ignore
       return process.env[key];
     }
     
-    // 3. Fallback
     // @ts-ignore
     return process.env[key];
   } catch {
@@ -23,17 +19,15 @@ const getEnvVar = (key: string, viteKey: string) => {
   }
 };
 
-// 1. MAIN DB (HumanFlow Data - Writes allowed)
 const MAIN_DB_URL = getEnvVar('DATABASE_URL', 'VITE_DATABASE_URL');
 if (MAIN_DB_URL) {
-  console.log('🔌 Main DB URL found:', MAIN_DB_URL.split('@')[1] || '...Hidden...');
+  console.log('🔌 Main DB URL found');
 } else {
   console.warn('⚠️ No DATABASE_URL found. App will run in offline mode.');
 }
 
 const sqlMain = MAIN_DB_URL ? neon(MAIN_DB_URL) : null;
 
-// 2. AUTH DB (External Tool - Read Only recommended)
 const AUTH_DB_URL = getEnvVar('AUTH_DATABASE_URL', 'VITE_AUTH_DATABASE_URL');
 if (AUTH_DB_URL) console.log('🔌 Auth DB URL found');
 
@@ -41,22 +35,15 @@ const sqlAuth = AUTH_DB_URL ? neon(AUTH_DB_URL) : null;
 
 export const NeonService = {
   
-  /**
-   * Checks if MAIN connection is available
-   */
   isConnected: () => !!sqlMain,
   isAuthConnected: () => !!sqlAuth,
 
-  /**
-   * Initializes the schema ONLY on the Main DB.
-   */
   async initSchema() {
     if (!sqlMain) return;
 
     try {
       console.log('⚙️ Initializing Schema...');
       
-      // 1. Users Table
       await sqlMain`
         CREATE TABLE IF NOT EXISTS users (
           email TEXT PRIMARY KEY,
@@ -65,7 +52,6 @@ export const NeonService = {
         )
       `;
 
-      // 2. Uploads
       await sqlMain`
         CREATE TABLE IF NOT EXISTS uploads (
           id SERIAL PRIMARY KEY,
@@ -77,7 +63,6 @@ export const NeonService = {
         )
       `;
 
-      // 3. Prospects
       await sqlMain`
         CREATE TABLE IF NOT EXISTS prospects (
           id TEXT PRIMARY KEY,
@@ -95,20 +80,14 @@ export const NeonService = {
     }
   },
 
-  /**
-   * Logs a user in using the "Dual Database" strategy.
-   * Requires Password check against AUTH_DATABASE_URL.
-   */
   async loginUser(email: string, password: string): Promise<User | null> {
     const cleanEmail = email.toLowerCase().trim();
     let finalUser: User = { email: cleanEmail };
     let isAuthenticated = false;
 
-    // STEP 1: Validate against External Auth DB
     if (sqlAuth) {
       try {
-        console.log(`🔐 Authenticating ${cleanEmail} against Auth DB...`);
-        // Checking match of email AND password
+        console.log(`🔐 Authenticating ${cleanEmail}...`);
         const externalUser = await sqlAuth`
             SELECT id, name, logo_url, plan, company_name, role 
             FROM users 
@@ -119,7 +98,6 @@ export const NeonService = {
 
         if (externalUser && externalUser.length > 0) {
           const u = externalUser[0];
-          console.log("✅ Credentials Validated.");
           isAuthenticated = true;
           finalUser = {
             ...finalUser,
@@ -131,55 +109,39 @@ export const NeonService = {
             role: u.role
           };
         } else {
-            console.warn("❌ Invalid Credentials or User not found in Auth DB");
-            return null; // Return null to block access
+            return null; 
         }
       } catch (err) {
-        console.error("⚠️ Error checking Auth DB:", err);
-        // If Auth DB is configured but fails (e.g. timeout), we deny access for security
+        console.error("⚠️ Auth DB Error:", err);
         return null; 
       }
     } else {
-        // Fallback: If no Auth DB configured, we act as "Offline/Demo" mode
-        // accepting any email, but logic in App.tsx might restrict this if needed.
-        console.log("ℹ️ No Auth DB configured. Skipping password check (Demo Mode).");
+        console.log("ℹ️ Demo Mode (No Auth DB).");
         isAuthenticated = true;
     }
 
     if (!isAuthenticated) return null;
 
-    // STEP 2: Ensure User exists in Main DB (Writes)
     if (sqlMain) {
       try {
-        console.log(`💾 Syncing user ${cleanEmail} to Main DB...`);
         await sqlMain`
           INSERT INTO users (email) 
           VALUES (${cleanEmail})
           ON CONFLICT (email) 
           DO UPDATE SET last_seen = CURRENT_TIMESTAMP
         `;
-        console.log("✅ User synced to Main DB");
-      } catch (err) {
-        console.error("❌ Error syncing user to Main DB", err);
+      } catch {
+        // Ignore sync errors
       }
     }
 
     return finalUser;
   },
 
-  /**
-   * Saves session to Main DB
-   */
   async saveSession(email: string, filename: string, sheetName: string, mapping: any, prospects: Prospect[]) {
-    if (!sqlMain) {
-        console.error("❌ Cannot save session: No Main DB connection.");
-        return null;
-    }
+    if (!sqlMain) return null;
 
     try {
-      console.log(`💾 Saving session for ${email} file: ${filename}`);
-      
-      // Create Upload Record
       const uploadResult = await sqlMain`
         INSERT INTO uploads (user_email, filename, sheet_name, mapped_config)
         VALUES (${email}, ${filename}, ${sheetName}, ${mapping})
@@ -187,9 +149,8 @@ export const NeonService = {
       `;
       
       const uploadId = uploadResult[0].id;
-
-      // Save Prospects Batch
       const batchSize = 50;
+      
       for (let i = 0; i < prospects.length; i += batchSize) {
         const chunk = prospects.slice(i, i + batchSize);
         await Promise.all(chunk.map(p => sqlMain`
@@ -200,7 +161,7 @@ export const NeonService = {
 
       return uploadId;
     } catch (error) {
-      console.error('❌ Error saving session to DB:', error);
+      console.error('❌ Error saving session:', error);
       throw error;
     }
   },
@@ -216,8 +177,8 @@ export const NeonService = {
               data = jsonb_set(data, '{estado}', ${`"${newStatus}"`}) 
           WHERE id = ${prospectId}
       `;
-    } catch (error) {
-       console.error("Error updating status:", error);
+    } catch {
+       // Silent fail in background
     }
   },
 
