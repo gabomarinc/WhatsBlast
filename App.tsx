@@ -10,7 +10,6 @@ import { DataService } from './services/dataService';
 import { NeonService } from './services/neon';
 import { AppState, Notification, Prospect, Template, ColumnMapping, User } from './types';
 import { APP_NAME } from './constants';
-import { Button } from './components/Button'; // Added Button for logout
 
 const SESSION_KEY = 'hf_user_session_v1';
 
@@ -79,6 +78,40 @@ const App: React.FC = () => {
     addNotification("Sesión cerrada correctamente", "info");
   };
 
+  // STRICT LOGIN HANDLER
+  const handleLogin = async (email: string, password: string): Promise<boolean> => {
+      setState(prev => ({ ...prev, isLoading: true }));
+      
+      try {
+          if (!NeonService.isAuthConnected()) {
+              addNotification("Error: No hay conexión a base de datos de Auth.", "error");
+              setState(prev => ({ ...prev, isLoading: false }));
+              return false;
+          }
+
+          const fetchedProfile = await NeonService.loginUser(email, password);
+          
+          if (fetchedProfile) {
+              // Success
+              localStorage.setItem(SESSION_KEY, JSON.stringify(fetchedProfile));
+              setState(prev => ({ ...prev, currentUser: fetchedProfile, isLoading: false }));
+              addNotification(`¡Bienvenido, ${fetchedProfile.name || email}! 👋`, "success");
+              return true;
+          } else {
+              // Failed credentials
+              addNotification("Credenciales incorrectas.", "error");
+              setState(prev => ({ ...prev, isLoading: false }));
+              return false;
+          }
+
+      } catch (error) {
+          console.error(error);
+          addNotification("Error de conexión al servidor.", "error");
+          setState(prev => ({ ...prev, isLoading: false }));
+          return false;
+      }
+  };
+
   const handleResumeSession = async (uploadId: number) => {
       setState(prev => ({ ...prev, isLoading: true }));
       try {
@@ -99,76 +132,35 @@ const App: React.FC = () => {
       }
   };
 
-  const handleFileSelect = async (file: File, email?: string, password?: string) => {
+  const handleFileSelect = async (file: File) => {
+    // Security Check: strictly require currentUser
+    if (!state.currentUser) {
+        addNotification("Debes iniciar sesión primero.", "error");
+        return;
+    }
+
     setState(prev => ({ 
       ...prev, 
       isLoading: true, 
       currentFilename: file.name 
     }));
     
-    let loginSuccess = false;
-    let userToSet = state.currentUser;
-
-    // SCENARIO A: User already logged in (Session exists)
-    if (state.currentUser) {
-        loginSuccess = true;
-    } 
-    // SCENARIO B: New Login attempt
-    else if (email && password) {
-        if (NeonService.isAuthConnected()) {
-            try {
-              const fetchedProfile = await NeonService.loginUser(email, password);
-              if (fetchedProfile) {
-                loginSuccess = true;
-                userToSet = fetchedProfile;
-                
-                // SAVE SESSION
-                localStorage.setItem(SESSION_KEY, JSON.stringify(fetchedProfile));
-                
-                if (fetchedProfile.name) {
-                  addNotification(`¡Hola de nuevo, ${fetchedProfile.name}! 👋`, "success");
-                }
-              } else {
-                  addNotification("Credenciales inválidas.", "error");
-                  setState(prev => ({ ...prev, isLoading: false }));
-                  return;
-              }
-            } catch {
-              addNotification("Error de conexión.", "error");
-              setState(prev => ({ ...prev, isLoading: false }));
-              return;
-            }
-        } else {
-            // Offline Mode Login
-            loginSuccess = true;
-            userToSet = { email };
-            localStorage.setItem(SESSION_KEY, JSON.stringify(userToSet));
-            addNotification("Modo Offline activado", "info");
-        }
-    }
-
-    if (loginSuccess) {
-        // Update user state if it was a new login
-        if (userToSet) {
-             setState(prev => ({ ...prev, currentUser: userToSet }));
-        }
-
-        setTimeout(async () => {
-          const result = await DataService.processFile(file);
-          if (result.success && result.data) {
-            setState(prev => ({ 
-              ...prev, 
-              step: 'configure',
-              workbook: result.data!.workbook,
-              sheetTabs: result.data!.sheets,
-              isLoading: false 
-            }));
-          } else {
-            addNotification(result.error || "Error al leer archivo", "error");
-            setState(prev => ({ ...prev, isLoading: false }));
-          }
-        }, 800);
-    }
+    // Slight delay for UX
+    setTimeout(async () => {
+      const result = await DataService.processFile(file);
+      if (result.success && result.data) {
+        setState(prev => ({ 
+          ...prev, 
+          step: 'configure',
+          workbook: result.data!.workbook,
+          sheetTabs: result.data!.sheets,
+          isLoading: false 
+        }));
+      } else {
+        addNotification(result.error || "Error al leer archivo", "error");
+        setState(prev => ({ ...prev, isLoading: false }));
+      }
+    }, 800);
   };
 
   const prospectsFilteredByColumns = useMemo(() => {
@@ -284,7 +276,8 @@ const App: React.FC = () => {
     return (
       <>
         <ConnectScreen 
-            onFileSelect={handleFileSelect} 
+            onFileSelect={handleFileSelect}
+            onLogin={handleLogin}
             isLoading={state.isLoading} 
             currentUser={state.currentUser}
             onLogout={handleLogout}

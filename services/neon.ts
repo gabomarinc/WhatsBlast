@@ -109,14 +109,16 @@ export const NeonService = {
             role: u.role
           };
         } else {
-            return null; 
+            console.warn("❌ Login Failed: Invalid Credentials");
+            return null; // Strict Fail
         }
       } catch (err) {
         console.error("⚠️ Auth DB Error:", err);
-        return null; 
+        return null; // Strict Fail on Error
       }
     } else {
-        console.log("ℹ️ Demo Mode (No Auth DB).");
+        // Fallback for Development ONLY if no AUTH_DB provided
+        console.warn("ℹ️ No AUTH_DB provided. Accepting in demo mode.");
         isAuthenticated = true;
     }
 

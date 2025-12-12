@@ -1,18 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UploadRecord } from '../types';
 import { NeonService } from '../services/neon';
-import { Button } from './Button';
 
 interface ConnectScreenProps {
-  onFileSelect: (file: File, email?: string, password?: string) => void;
+  onFileSelect: (file: File) => void;
+  onLogin: (email: string, pass: string) => Promise<boolean>;
   isLoading: boolean;
   currentUser?: User | null;
   onLogout?: () => void;
-  onResume?: (uploadId: number) => void; // New prop
+  onResume?: (uploadId: number) => void;
 }
 
 export const ConnectScreen: React.FC<ConnectScreenProps> = ({ 
   onFileSelect, 
+  onLogin,
   isLoading,
   currentUser,
   onLogout,
@@ -40,7 +41,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!currentUser && (!email || !password)) return; 
+    if (!currentUser) return; 
     setIsDragging(true);
   };
 
@@ -51,10 +52,8 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    setError(null);
-
-    // If guest, validate fields
-    if (!currentUser && !validateCredentials()) return;
+    
+    if (!currentUser) return;
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
@@ -63,32 +62,19 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setError(null);
-    if (!currentUser && !validateCredentials()) return;
-
+    if (!currentUser) return;
     if (e.target.files && e.target.files.length > 0) {
       validateAndUpload(e.target.files[0]);
     }
   };
 
-  const validateCredentials = () => {
-    if (!email) {
-      setError("Por favor identifícate con tu correo.");
-      return false;
-    }
-    if (!validateEmail(email)) {
-        setError("Ese correo no parece válido.");
-        return false;
-    }
-    if (!password) {
-        setError("Necesitamos tu contraseña para continuar.");
-        return false;
-    }
-    return true;
-  };
-
-  const validateEmail = (e: string) => {
-    return /\S+@\S+\.\S+/.test(e);
+  const handleLoginClick = async () => {
+     if (!email || !password) {
+         setError("Por favor ingresa correo y contraseña.");
+         return;
+     }
+     setError(null);
+     await onLogin(email, password);
   };
 
   const validateAndUpload = (file: File) => {
@@ -102,22 +88,19 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
     const isValidExt = name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv');
 
     if (isValidExt || validTypes.includes(file.type)) {
-      if (currentUser) {
-          onFileSelect(file);
-      } else {
-          onFileSelect(file, email, password);
-      }
+      onFileSelect(file);
     } else {
-      setError("Solo entendemos archivos Excel (.xlsx, .xls) o CSV.");
+      // Just a local error state, not a notification
+      alert("Solo archivos Excel (.xlsx) o CSV.");
     }
   };
 
   const triggerFileSelect = () => {
-      if (!currentUser && !validateCredentials()) return;
+      if (!currentUser) return;
       fileInputRef.current?.click();
   }
 
-  const isFormValid = currentUser ? true : (email.length > 0 && password.length > 0);
+  const isFormValid = email.length > 0 && password.length > 0;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-[#f3f4f6] relative overflow-hidden">
@@ -157,9 +140,9 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
               </p>
            </div>
            
-           {/* HISTORY SECTION */}
+           {/* HISTORY SECTION - Only visible if logged in */}
            {currentUser && NeonService.isConnected() && (
-             <div className="mt-4 flex-1">
+             <div className="mt-4 flex-1 animate-slide-up">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Continuar Prospección</h3>
                 
                 {isLoadingHistory ? (
@@ -191,7 +174,6 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                                    </div>
                                 </div>
                                 <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
-                                   {/* Circular Progress */}
                                    <svg className="w-10 h-10 transform -rotate-90">
                                       <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="3" fill="transparent" className="text-slate-100" />
                                       <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="3" fill="transparent" strokeDasharray={100} strokeDashoffset={100 - percent} className="text-indigo-500 transition-all duration-1000" />
@@ -216,7 +198,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                         {currentUser ? 'Nueva Carga' : 'Acceso'}
                     </h2>
                     <p className="text-sm text-slate-400">
-                        {currentUser ? 'Sube un Excel para iniciar una nueva campaña.' : 'Ingresa tus credenciales para comenzar.'}
+                        {currentUser ? 'Sube un Excel para iniciar una nueva campaña.' : 'Ingresa tus credenciales para continuar.'}
                     </p>
                 </div>
                 {currentUser && onLogout && (
@@ -226,74 +208,86 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                 )}
             </div>
 
+            {/* STATE 1: LOGGED OUT - SHOW LOGIN FORM */}
             {!currentUser && (
-                <div className="space-y-4 mb-8">
+                <div className="space-y-4 mb-8 animate-slide-up">
                     <div className="group">
+                        <label className="text-[10px] uppercase font-black tracking-widest text-slate-400 ml-1">Correo Electrónico</label>
                         <input 
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Correo electrónico"
-                            className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-slate-300 placeholder:font-semibold"
+                            className="mt-1 w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-slate-300 placeholder:font-semibold"
                         />
                     </div>
                     <div className="group">
+                         <label className="text-[10px] uppercase font-black tracking-widest text-slate-400 ml-1">Contraseña</label>
                         <input 
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Contraseña"
-                            className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-slate-300 placeholder:font-semibold"
+                            className="mt-1 w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-slate-300 placeholder:font-semibold"
                         />
+                    </div>
+
+                    <div className="pt-2">
+                        <button
+                            onClick={handleLoginClick}
+                            disabled={isLoading || !isFormValid}
+                            className={`w-full py-4 rounded-xl font-black text-sm transition-all transform active:scale-95 ${isLoading || !isFormValid ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-200'}`}
+                        >
+                            {isLoading ? 'Verificando...' : 'Iniciar Sesión →'}
+                        </button>
                     </div>
                 </div>
             )}
 
-            {/* Drop Zone */}
-            <div 
-              onClick={triggerFileSelect}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`
-                relative h-48 rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer overflow-hidden
-                ${isDragging ? 'border-indigo-500 bg-indigo-50/50 scale-[1.02]' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}
-                ${!isFormValid ? 'opacity-50 cursor-not-allowed grayscale' : ''}
-              `}
-            >
-               <input 
-                 type="file" 
-                 ref={fileInputRef}
-                 onChange={handleFileInput}
-                 className="hidden"
-                 accept=".xlsx, .xls, .csv"
-                 disabled={!isFormValid || isLoading}
-               />
+            {/* STATE 2: LOGGED IN - SHOW DROP ZONE */}
+            {currentUser && (
+                <div 
+                onClick={triggerFileSelect}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`
+                    relative h-64 rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer overflow-hidden animate-slide-up
+                    ${isDragging ? 'border-indigo-500 bg-indigo-50/50 scale-[1.02]' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}
+                `}
+                >
+                <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleFileInput}
+                    className="hidden"
+                    accept=".xlsx, .xls, .csv"
+                    disabled={isLoading}
+                />
 
-               {isLoading ? (
-                  <div className="flex flex-col items-center animate-pulse z-10">
-                     <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3"></div>
-                     <p className="text-sm font-bold text-indigo-700">Procesando...</p>
-                  </div>
-               ) : (
-                  <div className="z-10 px-6">
-                     <div className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center text-2xl mb-3 shadow-sm transition-all ${isFormValid ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-slate-200 text-slate-400'}`}>
-                        {isFormValid ? '📂' : '🔒'}
-                     </div>
-                     <p className="text-sm font-black text-slate-700 mb-1">
-                        {isFormValid ? (currentUser ? 'Sube tu nuevo Excel' : 'Sube tu Excel aquí') : 'Completa el formulario'}
-                     </p>
-                     <p className="text-xs text-slate-400 font-medium">
-                        {isFormValid ? 'Haz clic o arrastra el archivo' : 'Ingresa tus datos para desbloquear'}
-                     </p>
-                  </div>
-               )}
+                {isLoading ? (
+                    <div className="flex flex-col items-center animate-pulse z-10">
+                        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3"></div>
+                        <p className="text-sm font-bold text-indigo-700">Procesando archivo...</p>
+                    </div>
+                ) : (
+                    <div className="z-10 px-6">
+                        <div className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center text-2xl mb-3 shadow-sm transition-all bg-indigo-600 text-white shadow-indigo-200`}>
+                            📂
+                        </div>
+                        <p className="text-sm font-black text-slate-700 mb-1">
+                            Sube tu nuevo Excel
+                        </p>
+                        <p className="text-xs text-slate-400 font-medium">
+                            Haz clic o arrastra el archivo aquí
+                        </p>
+                    </div>
+                )}
 
-               {/* Background Texture for Dropzone */}
-               {isFormValid && !isLoading && (
-                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px]"></div>
-               )}
-            </div>
+                {/* Background Texture for Dropzone */}
+                {!isLoading && (
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                )}
+                </div>
+            )}
 
             {error && (
               <div className="absolute bottom-4 left-0 w-full px-10">
