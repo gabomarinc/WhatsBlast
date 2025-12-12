@@ -1,12 +1,33 @@
 import { neon } from '@neondatabase/serverless';
 import { Prospect } from '../types';
 
-// NOTE: In a production environment, this URL should be proxied through a backend
-// to avoid exposing credentials in the client bundle.
-// Safely access env to avoid "Cannot read properties of undefined" if import.meta.env is missing
-const env = (import.meta as any).env || {};
-const DATABASE_URL = env.VITE_DATABASE_URL;
+// Helper to safely get the database URL from various possible sources
+const getDatabaseUrl = () => {
+  try {
+    // 1. Try standard Vite Environment Variable
+    // safely access import.meta.env to prevent crash if undefined
+    const metaEnv = (import.meta as any).env || {};
+    if (metaEnv.VITE_DATABASE_URL) return metaEnv.VITE_DATABASE_URL;
 
+    // 2. Try Injected Process Env (from vite.config.ts define)
+    // We access this directly because Vite replaces 'process.env.DATABASE_URL' with the string value at build time
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env && process.env.DATABASE_URL) {
+      // @ts-ignore
+      return process.env.DATABASE_URL;
+    }
+    
+    // 3. Fallback for injected global constant (if process is not defined but replacement happened)
+    // @ts-ignore
+    return process.env.DATABASE_URL; 
+  } catch (e) {
+    return null;
+  }
+};
+
+const DATABASE_URL = getDatabaseUrl();
+
+// Initialize SQL connection only if URL is present
 const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
 
 export const NeonService = {
