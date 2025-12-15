@@ -209,7 +209,12 @@ export const NeonService = {
   },
 
   async saveSession(email: string, filename: string, sheetName: string, mapping: any, prospects: Prospect[]) {
-    if (!sqlMain) throw new Error("No Data Connection");
+    // Graceful fallback for Demo/Local mode if DB is missing
+    if (!sqlMain) {
+        console.warn("⚠️ SAVE SKIPPED: No DB Connection. Operating in Local Mode.");
+        // Return a mock ID (-1) to allow the app flow to continue
+        return -1;
+    }
 
     // Ensure status default
     const prospectsWithStatus = prospects.map(p => ({
@@ -282,6 +287,9 @@ export const NeonService = {
   },
 
   async getSessionProspects(uploadId: number): Promise<{ prospects: Prospect[], mapping: any }> {
+      // If we are in mock mode (id -1), throw because we can't resume from nothing
+      if (uploadId === -1) throw new Error("Local session cannot be resumed.");
+      
       if (!sqlMain) throw new Error("No Data Connection");
       
       const uploadRes = await sqlMain`SELECT mapped_config FROM uploads WHERE id = ${uploadId}`;

@@ -83,7 +83,10 @@ const App: React.FC = () => {
       setState(prev => ({ ...prev, isLoading: true }));
       
       try {
-          if (!NeonService.isAuthConnected()) {
+          // BYPASS: If using demo credentials, skip connection check
+          const isDemoAttempt = email.trim().toLowerCase() === 'demo@humanflow.com';
+
+          if (!isDemoAttempt && !NeonService.isAuthConnected()) {
               addNotification("Error: No hay conexión a base de datos de Auth.", "error");
               setState(prev => ({ ...prev, isLoading: false }));
               return false;
@@ -209,7 +212,8 @@ const App: React.FC = () => {
     const data = DataService.getProspects(state.workbook, tabName, mapping);
     setProspects(data);
 
-    if (NeonService.isConnected() && state.currentUser?.email) {
+    // Try to save to DB, but don't block if it fails (Offline Mode)
+    if (state.currentUser?.email) {
         try {
             await NeonService.saveSession(
                 state.currentUser.email,
@@ -218,9 +222,13 @@ const App: React.FC = () => {
                 mapping,
                 data
             );
-            addNotification("Datos sincronizados ☁️", "success");
+            if (NeonService.isConnected()) {
+                addNotification("Datos sincronizados ☁️", "success");
+            } else {
+                 addNotification("Modo Local: Datos listos", "info");
+            }
         } catch {
-            addNotification("Guardado local (Sin conexión)", "info");
+            addNotification("Modo Local (Sin conexión)", "info");
         }
     }
 
