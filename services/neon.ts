@@ -110,6 +110,35 @@ export const NeonService = {
    */
   async loginUser(email: string, password: string): Promise<User | null> {
     const cleanEmail = email.toLowerCase().trim();
+
+    // --- 🚀 DEMO MODE ACCESS (Bypass DB) ---
+    if (cleanEmail === 'demo@humanflow.com' && password === 'demo') {
+        console.log("🚀 ACCESS GRANTED: DEMO MODE ENABLED");
+
+        // Attempt to sync Demo user to Main DB so history works if DB is connected
+        if (sqlMain) {
+            try {
+                await sqlMain`
+                    INSERT INTO users (email) 
+                    VALUES (${cleanEmail})
+                    ON CONFLICT (email) 
+                    DO UPDATE SET last_seen = CURRENT_TIMESTAMP
+                `;
+            } catch (e) {
+                console.warn("Could not sync demo user to DB (History might not save, but app will work):", e);
+            }
+        }
+
+        return {
+            id: 'demo-user-id',
+            email: 'demo@humanflow.com',
+            name: 'Usuario Demo',
+            company_name: 'HumanFlow Demo',
+            logo_url: 'https://cdn-icons-png.flaticon.com/512/9187/9187604.png',
+            plan: 'unlimited',
+            role: 'demo'
+        };
+    }
     
     if (!sqlAuth) {
         console.error("❌ Fatal: Auth Database connection not initialized.");
@@ -120,7 +149,6 @@ export const NeonService = {
         console.log(`🔐 Authenticating ${cleanEmail}...`);
         
         // STEP 1: Find user by email (Case Insensitive using LOWER)
-        // This ensures 'User@Test.com' matches 'user@test.com'
         const companies = await sqlAuth`
             SELECT * 
             FROM companies 
@@ -134,30 +162,20 @@ export const NeonService = {
 
         const company = companies[0];
         
-        // STEP 2: Verify Password (In Application Layer for debugging)
-        // Convert both to string to be safe against number types in DB
+        // STEP 2: Verify Password
         const dbPassword = String(company.password || '');
         const inputPassword = String(password || '');
 
         if (dbPassword !== inputPassword) {
             console.group("❌ Login Failed: Password Mismatch");
             console.log("Email Found:", cleanEmail);
-            console.log("DB Password Length:", dbPassword.length);
-            console.log("Input Password Length:", inputPassword.length);
-            
-            if (dbPassword.trim() !== dbPassword) {
-                console.warn("⚠️ WARNING: Your password in the database has hidden whitespace at start or end.");
-            }
-            if (dbPassword.trim() === inputPassword) {
-                console.warn("⚠️ HINT: It matches if we trim the DB password. Check your DB data.");
-            }
+            console.warn("Password mismatch. Use Demo Mode (demo@humanflow.com / demo) if you are testing.");
             console.groupEnd();
             return null;
         }
 
         console.log("✅ Login Successful");
 
-        // Map fields to User type
         const userProfile: User = {
             id: company.id,
             email: company.email,

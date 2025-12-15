@@ -218,7 +218,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all placeholder:text-secondary-300 placeholder:font-semibold"
-                            placeholder="ejemplo@empresa.com"
+                            placeholder="demo@humanflow.com"
                         />
                     </div>
                     <div className="group">
@@ -228,7 +228,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all placeholder:text-secondary-300 placeholder:font-semibold"
-                            placeholder="••••••••"
+                            placeholder="demo"
                         />
                     </div>
 
