@@ -78,16 +78,14 @@ const App: React.FC = () => {
     addNotification("Sesión cerrada correctamente", "info");
   };
 
-  // STRICT LOGIN HANDLER
+  // STRICT LOGIN HANDLER - NOW VALIDATES EVERYONE AGAINST DB
   const handleLogin = async (email: string, password: string): Promise<boolean> => {
       setState(prev => ({ ...prev, isLoading: true }));
       
       try {
-          // BYPASS: If using demo credentials, skip connection check
-          const isDemoAttempt = email.trim().toLowerCase() === 'demo@humanflow.com';
-
-          if (!isDemoAttempt && !NeonService.isAuthConnected()) {
-              addNotification("Error: No hay conexión a base de datos de Auth.", "error");
+          // Strict check: We must be connected to the DB
+          if (!NeonService.isConnected()) {
+              addNotification("Error: No hay conexión a la base de datos.", "error");
               setState(prev => ({ ...prev, isLoading: false }));
               return false;
           }

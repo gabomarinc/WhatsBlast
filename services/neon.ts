@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { Prospect, User, UploadRecord } from '../types';
+import bcrypt from 'bcryptjs';
 
 /**
  * --- SAFE ENVIRONMENT VARIABLE EXTRACTION ---
@@ -55,7 +56,6 @@ export const NeonService = {
 
   /**
    * Initializes schema in MAIN DB.
-   * Now includes full user profile fields since we removed external Auth DB.
    */
   async initSchema() {
     if (!sql) return;
@@ -72,18 +72,22 @@ export const NeonService = {
           plan TEXT DEFAULT 'free',
           role TEXT DEFAULT 'user',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          recovery_code TEXT,
+          recovery_expires TIMESTAMP
         )
       `;
 
-      // 2. Migrations: Add columns if table existed from previous version but lacked auth fields
-      // This ensures we don't break existing data, but we enable the new features.
+      // 2. Migrations
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT`; } catch (e) {}
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT`; } catch (e) {}
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name TEXT`; } catch (e) {}
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS logo_url TEXT`; } catch (e) {}
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free'`; } catch (e) {}
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user'`; } catch (e) {}
+      // Recovery columns
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_code TEXT`; } catch (e) {}
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_expires TIMESTAMP`; } catch (e) {}
 
       // 3. Uploads Table
       await sql`
@@ -111,69 +115,25 @@ export const NeonService = {
       
       console.log('✅ Main DB Schema Synced');
 
-      // 5. Seed default admin if empty (Optional helper for quick start)
-      const userCount = await sql`SELECT count(*) FROM users`;
-      if (Number(userCount[0].count) === 0) {
-          console.log("🌱 Seeding default admin user...");
-          await sql`
-            INSERT INTO users (email, password, name, company_name, plan, role)
-            VALUES (
-                'admin@humanflow.com', 
-                'admin', 
-                'Admin HumanFlow', 
-                'HumanFlow HQ', 
-                'unlimited', 
-                'admin'
-            )
-          `;
-      }
-
     } catch (error) {
       console.error('❌ Error initializing Main DB:', error);
     }
   },
 
   /**
-   * Login Logic: Queries 'users' table in the MAIN DB.
+   * Login Logic with Security Upgrade
+   * Checks for Bcrypt hash. If plain text matches, upgrades to Bcrypt.
    */
   async loginUser(email: string, password: string): Promise<User | null> {
     const cleanEmail = email.toLowerCase().trim();
-
-    // --- 🚀 DEMO MODE ACCESS (Bypass DB entirely) ---
-    if (cleanEmail === 'demo@humanflow.com' && password === 'demo') {
-        console.log("🚀 ACCESS GRANTED: DEMO MODE ENABLED");
-        
-        // Sync Demo user to DB if connected, just so foreign keys work
-        if (sql) {
-            try {
-                await sql`
-                    INSERT INTO users (email, name, company_name) 
-                    VALUES (${cleanEmail}, 'Usuario Demo', 'HumanFlow Demo')
-                    ON CONFLICT (email) 
-                    DO UPDATE SET last_seen = CURRENT_TIMESTAMP
-                `;
-            } catch (e) {}
-        }
-
-        return {
-            id: 'demo-user-id',
-            email: 'demo@humanflow.com',
-            name: 'Usuario Demo',
-            company_name: 'HumanFlow Demo',
-            logo_url: 'https://cdn-icons-png.flaticon.com/512/9187/9187604.png',
-            plan: 'unlimited',
-            role: 'demo'
-        };
-    }
     
-    // --- REAL DB LOGIN ---
     if (!sql) {
         console.error("❌ Fatal: Database connection not initialized.");
         return null;
     }
 
     try {
-        console.log(`🔐 Authenticating ${cleanEmail} against Main DB...`);
+        console.log(`🔐 Authenticating ${cleanEmail}...`);
         
         const users = await sql`
             SELECT * 
@@ -189,22 +149,45 @@ export const NeonService = {
         const user = users[0];
         const dbPassword = String(user.password || '');
         const inputPassword = String(password || '');
+        
+        let isValid = false;
+        let needsUpgrade = false;
 
-        // Note: In production, use bcrypt/argon2. For this app scope, text comparison is used.
-        if (dbPassword !== inputPassword) {
+        // 1. Check if it's a bcrypt hash (starts with $2a$ or $2b$)
+        const isHash = dbPassword.startsWith('$2a$') || dbPassword.startsWith('$2b$');
+
+        if (isHash) {
+            isValid = await bcrypt.compare(inputPassword, dbPassword);
+        } else {
+            // 2. Legacy Plain Text Check
+            if (dbPassword === inputPassword) {
+                isValid = true;
+                needsUpgrade = true;
+            }
+        }
+
+        if (!isValid) {
             console.warn("❌ Login Failed: Password mismatch.");
             return null;
         }
 
         console.log("✅ Login Successful");
 
-        // Update Last Seen
-        try {
-            await sql`UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE email = ${cleanEmail}`;
-        } catch(e) {}
+        // 3. Upgrade Security if needed (Background task)
+        if (needsUpgrade) {
+            console.log("🔒 Upgrading password security to Bcrypt...");
+            const salt = await bcrypt.genSalt(10);
+            const hash = await bcrypt.hash(inputPassword, salt);
+            await sql`UPDATE users SET password = ${hash}, last_seen = CURRENT_TIMESTAMP WHERE email = ${cleanEmail}`;
+        } else {
+            // Just update last seen
+            try {
+                await sql`UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE email = ${cleanEmail}`;
+            } catch(e) {}
+        }
 
         return {
-            id: user.id || cleanEmail, // Fallback ID
+            id: user.id || cleanEmail,
             email: user.email,
             name: user.name || cleanEmail.split('@')[0],
             company_name: user.company_name || "Mi Empresa",
@@ -219,10 +202,83 @@ export const NeonService = {
     }
   },
 
+  /**
+   * Generates a 4-digit code and saves it to DB.
+   * In a real app, you would send this via Email API.
+   * Here, we return the code to the UI to simulate the email arrival.
+   */
+  async requestPasswordRecovery(email: string): Promise<{ success: boolean; code?: string; error?: string }> {
+      if (!sql) return { success: false, error: "Sin conexión a DB" };
+      const cleanEmail = email.toLowerCase().trim();
+
+      try {
+        const users = await sql`SELECT email FROM users WHERE LOWER(email) = ${cleanEmail}`;
+        if (users.length === 0) return { success: false, error: "Correo no encontrado" };
+
+        // Generate 4 digit code
+        const code = Math.floor(1000 + Math.random() * 9000).toString();
+        
+        // Save to DB with 15 min expiration
+        await sql`
+            UPDATE users 
+            SET recovery_code = ${code}, 
+                recovery_expires = NOW() + INTERVAL '15 minutes' 
+            WHERE email = ${cleanEmail}
+        `;
+
+        // We return the code here ONLY because we don't have a real SMTP server.
+        // This allows the frontend to show a "Simulated Email" toast.
+        return { success: true, code }; 
+
+      } catch (e) {
+          console.error(e);
+          return { success: false, error: "Error interno" };
+      }
+  },
+
+  /**
+   * Verifies code and sets new hashed password
+   */
+  async confirmPasswordReset(email: string, code: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+      if (!sql) return { success: false, error: "Sin conexión a DB" };
+      const cleanEmail = email.toLowerCase().trim();
+
+      try {
+          const result = await sql`
+            SELECT * FROM users 
+            WHERE email = ${cleanEmail} 
+            AND recovery_code = ${code}
+            AND recovery_expires > NOW()
+          `;
+
+          if (result.length === 0) {
+              return { success: false, error: "Código inválido o expirado" };
+          }
+
+          // Hash new password
+          const salt = await bcrypt.genSalt(10);
+          const hash = await bcrypt.hash(newPassword, salt);
+
+          // Update password and clear code
+          await sql`
+            UPDATE users 
+            SET password = ${hash}, 
+                recovery_code = NULL, 
+                recovery_expires = NULL 
+            WHERE email = ${cleanEmail}
+          `;
+
+          return { success: true };
+
+      } catch (e) {
+          console.error(e);
+          return { success: false, error: "No se pudo actualizar la contraseña" };
+      }
+  },
+
   async saveSession(email: string, filename: string, sheetName: string, mapping: any, prospects: Prospect[]) {
-    // Graceful fallback for Demo/Local mode if DB is missing
     if (!sql) {
-        console.warn("⚠️ SAVE SKIPPED: No DB Connection. Operating in Local Mode.");
+        console.warn("⚠️ SAVE SKIPPED: No DB Connection.");
         return -1;
     }
 
@@ -232,7 +288,6 @@ export const NeonService = {
         estado: p.estado || 'Nuevo'
     }));
 
-    // Create Upload Record
     const uploadResult = await sql`
         INSERT INTO uploads (user_email, filename, sheet_name, mapped_config)
         VALUES (${email}, ${filename}, ${sheetName}, ${mapping})
@@ -240,7 +295,6 @@ export const NeonService = {
     `;
     const uploadId = uploadResult[0].id;
 
-    // Batch Insert Prospects
     const batchSize = 50;
     for (let i = 0; i < prospectsWithStatus.length; i += batchSize) {
         const chunk = prospectsWithStatus.slice(i, i + batchSize);
@@ -298,7 +352,6 @@ export const NeonService = {
 
   async getSessionProspects(uploadId: number): Promise<{ prospects: Prospect[], mapping: any }> {
       if (uploadId === -1) throw new Error("Local session cannot be resumed.");
-      
       if (!sql) throw new Error("No Data Connection");
       
       const uploadRes = await sql`SELECT mapped_config FROM uploads WHERE id = ${uploadId}`;

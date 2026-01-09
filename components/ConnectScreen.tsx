@@ -11,6 +11,9 @@ interface ConnectScreenProps {
   onResume?: (uploadId: number) => void;
 }
 
+// View state for the right panel
+type AuthView = 'login' | 'forgot' | 'reset';
+
 export const ConnectScreen: React.FC<ConnectScreenProps> = ({ 
   onFileSelect, 
   onLogin,
@@ -20,10 +23,20 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   onResume
 }) => {
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Login State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
+  // Recovery State
+  const [authView, setAuthView] = useState<AuthView>('login');
+  const [recoveryCode, setRecoveryCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   
   // History State
   const [history, setHistory] = useState<UploadRecord[]>([]);
@@ -77,6 +90,46 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
      await onLogin(email, password);
   };
 
+  const handleRequestRecovery = async () => {
+      if (!email || !email.includes('@')) {
+          setError("Ingresa un correo válido para recuperar.");
+          return;
+      }
+      setError(null);
+      
+      // Simulate Email Sending
+      const res = await NeonService.requestPasswordRecovery(email);
+      if (res.success && res.code) {
+          setAuthView('reset');
+          setSuccessMsg(`📧 [SIMULACIÓN] Tu código es: ${res.code}`);
+          // Clear success msg after 10 seconds
+          setTimeout(() => setSuccessMsg(null), 10000);
+      } else {
+          setError(res.error || "No se pudo enviar el código.");
+      }
+  };
+
+  const handleResetConfirm = async () => {
+      if (!recoveryCode || newPassword.length < 4) {
+          setError("Código o contraseña inválidos (min 4 chars).");
+          return;
+      }
+      if (newPassword !== confirmPassword) {
+          setError("Las contraseñas no coinciden.");
+          return;
+      }
+
+      const res = await NeonService.confirmPasswordReset(email, recoveryCode, newPassword);
+      if (res.success) {
+          setSuccessMsg("¡Contraseña actualizada! Inicia sesión.");
+          setAuthView('login');
+          setPassword(''); 
+          setTimeout(() => setSuccessMsg(null), 5000);
+      } else {
+          setError(res.error || "Código inválido o expirado.");
+      }
+  };
+
   const validateAndUpload = (file: File) => {
     const validTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
@@ -90,7 +143,6 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
     if (isValidExt || validTypes.includes(file.type)) {
       onFileSelect(file);
     } else {
-      // Just a local error state, not a notification
       alert("Solo archivos Excel (.xlsx) o CSV.");
     }
   };
@@ -195,10 +247,17 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
             <div className="mb-8 flex justify-between items-end">
                 <div>
                     <h2 className="text-xl font-black text-secondary-800 mb-1">
-                        {currentUser ? 'Nueva Carga' : 'Acceso'}
+                        {currentUser ? 'Nueva Carga' : authView === 'login' ? 'Acceso' : 'Recuperación'}
                     </h2>
                     <p className="text-sm text-secondary-400 font-medium">
-                        {currentUser ? 'Sube un Excel para iniciar una nueva campaña.' : 'Ingresa tus credenciales para continuar.'}
+                        {currentUser 
+                           ? 'Sube un Excel para iniciar una nueva campaña.' 
+                           : authView === 'login' 
+                              ? 'Ingresa tus credenciales para continuar.'
+                              : authView === 'forgot'
+                                ? 'Ingresa tu correo para recibir un código.'
+                                : 'Establece tu nueva contraseña.'
+                        }
                     </p>
                 </div>
                 {currentUser && onLogout && (
@@ -208,39 +267,132 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                 )}
             </div>
 
-            {/* STATE 1: LOGGED OUT - SHOW LOGIN FORM */}
+            {/* --- AUTH FORMS --- */}
             {!currentUser && (
                 <div className="space-y-5 mb-8 animate-slide-up">
-                    <div className="group">
-                        <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Correo Electrónico</label>
-                        <input 
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all placeholder:text-secondary-300 placeholder:font-semibold"
-                            placeholder="demo@humanflow.com"
-                        />
-                    </div>
-                    <div className="group">
-                         <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Contraseña</label>
-                        <input 
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all placeholder:text-secondary-300 placeholder:font-semibold"
-                            placeholder="demo"
-                        />
-                    </div>
+                    
+                    {/* VIEW: LOGIN */}
+                    {authView === 'login' && (
+                        <>
+                            <div className="group">
+                                <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Correo Electrónico</label>
+                                <input 
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all placeholder:text-secondary-300 placeholder:font-semibold"
+                                    placeholder="demo@humanflow.com"
+                                />
+                            </div>
+                            <div className="group">
+                                <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Contraseña</label>
+                                <input 
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all placeholder:text-secondary-300 placeholder:font-semibold"
+                                    placeholder="••••••"
+                                />
+                            </div>
 
-                    <div className="pt-4">
-                        <button
-                            onClick={handleLoginClick}
-                            disabled={isLoading || !isFormValid}
-                            className={`w-full py-4 rounded-xl font-black text-sm transition-all transform active:scale-[0.98] ${isLoading || !isFormValid ? 'bg-secondary-100 text-secondary-400 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600 shadow-xl shadow-primary-500/30'}`}
-                        >
-                            {isLoading ? 'Verificando...' : 'Iniciar Sesión →'}
-                        </button>
-                    </div>
+                            <div className="flex justify-end">
+                                <button onClick={() => { setAuthView('forgot'); setError(null); }} className="text-xs font-bold text-primary-600 hover:underline">
+                                    ¿Olvidaste tu contraseña?
+                                </button>
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    onClick={handleLoginClick}
+                                    disabled={isLoading || !isFormValid}
+                                    className={`w-full py-4 rounded-xl font-black text-sm transition-all transform active:scale-[0.98] ${isLoading || !isFormValid ? 'bg-secondary-100 text-secondary-400 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600 shadow-xl shadow-primary-500/30'}`}
+                                >
+                                    {isLoading ? 'Verificando...' : 'Iniciar Sesión →'}
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {/* VIEW: FORGOT PASSWORD */}
+                    {authView === 'forgot' && (
+                        <>
+                             <div className="group">
+                                <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Correo Electrónico</label>
+                                <input 
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all placeholder:text-secondary-300 placeholder:font-semibold"
+                                    placeholder="tucorreo@empresa.com"
+                                />
+                            </div>
+                            <div className="pt-2 flex flex-col gap-3">
+                                <button
+                                    onClick={handleRequestRecovery}
+                                    className="w-full py-4 rounded-xl font-black text-sm bg-primary-500 text-white hover:bg-primary-600 shadow-xl shadow-primary-500/30 transition-all active:scale-[0.98]"
+                                >
+                                    Enviar Código
+                                </button>
+                                <button
+                                    onClick={() => { setAuthView('login'); setError(null); }}
+                                    className="w-full py-3 rounded-xl font-bold text-xs text-secondary-500 hover:bg-secondary-100 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {/* VIEW: RESET PASSWORD */}
+                    {authView === 'reset' && (
+                        <>
+                             <div className="group">
+                                <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Código (Recibido en Correo)</label>
+                                <input 
+                                    type="text"
+                                    value={recoveryCode}
+                                    onChange={(e) => setRecoveryCode(e.target.value)}
+                                    className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-lg font-black tracking-widest text-center text-primary-600 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500"
+                                    placeholder="0000"
+                                    maxLength={4}
+                                />
+                            </div>
+                            <div className="group">
+                                <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Nueva Contraseña</label>
+                                <input 
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500"
+                                    placeholder="Nueva contraseña"
+                                />
+                            </div>
+                            <div className="group">
+                                <input 
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500"
+                                    placeholder="Confirmar contraseña"
+                                />
+                            </div>
+
+                            <div className="pt-2 flex flex-col gap-3">
+                                <button
+                                    onClick={handleResetConfirm}
+                                    className="w-full py-4 rounded-xl font-black text-sm bg-primary-500 text-white hover:bg-primary-600 shadow-xl shadow-primary-500/30 transition-all active:scale-[0.98]"
+                                >
+                                    Actualizar Contraseña
+                                </button>
+                                <button
+                                    onClick={() => { setAuthView('login'); setError(null); }}
+                                    className="w-full py-3 rounded-xl font-bold text-xs text-secondary-500 hover:bg-secondary-100 transition-all"
+                                >
+                                    Volver al Login
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -291,10 +443,19 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                 </div>
             )}
 
+            {/* Notifications */}
             {error && (
               <div className="absolute bottom-6 left-0 w-full px-10">
                   <div className="p-4 bg-red-50 text-red-500 text-xs font-bold rounded-xl flex items-center gap-3 animate-slide-up border border-red-100 shadow-sm">
                     <span className="text-lg">⚠️</span> {error}
+                  </div>
+              </div>
+            )}
+            
+            {successMsg && (
+              <div className="absolute top-6 left-0 w-full px-10 z-50">
+                  <div className="p-4 bg-green-50 text-green-700 text-xs font-bold rounded-xl flex items-center gap-3 animate-slide-up border border-green-100 shadow-lg shadow-green-100/50">
+                    <span className="text-lg">📩</span> {successMsg}
                   </div>
               </div>
             )}
