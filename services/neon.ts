@@ -3,33 +3,26 @@ import { Prospect, User, UploadRecord } from '../types';
 
 /**
  * --- SAFE ENVIRONMENT VARIABLE EXTRACTION ---
- * The app was crashing because it tried to read import.meta.env.VITE_... when import.meta.env was undefined.
- * We now use a defensive approach with try-catch blocks to safely retrieve the connection strings.
  */
 
 let RAW_MAIN_URL: string | undefined = undefined;
-let RAW_AUTH_URL: string | undefined = undefined;
 
-// 1. Try process.env (Injected by vite.config.ts define)
+// 1. Try process.env
 try {
     // @ts-ignore
     if (typeof process !== 'undefined' && process.env) {
         // @ts-ignore
         if (process.env.DATABASE_URL) RAW_MAIN_URL = process.env.DATABASE_URL;
-        // @ts-ignore
-        if (process.env.AUTH_DATABASE_URL) RAW_AUTH_URL = process.env.AUTH_DATABASE_URL;
     }
 } catch (e) {}
 
-// 2. Fallback to import.meta.env (Standard Vite) if not found yet
-if (!RAW_MAIN_URL || !RAW_AUTH_URL) {
+// 2. Fallback to import.meta.env
+if (!RAW_MAIN_URL) {
     try {
         // @ts-ignore
         if (typeof import.meta !== 'undefined' && import.meta.env) {
             // @ts-ignore
             if (!RAW_MAIN_URL && import.meta.env.VITE_DATABASE_URL) RAW_MAIN_URL = import.meta.env.VITE_DATABASE_URL;
-            // @ts-ignore
-            if (!RAW_AUTH_URL && import.meta.env.VITE_AUTH_DATABASE_URL) RAW_AUTH_URL = import.meta.env.VITE_AUTH_DATABASE_URL;
         }
     } catch (e) {}
 }
@@ -46,39 +39,54 @@ const formatConnectionUrl = (url: string | undefined): string | undefined => {
 };
 
 const MAIN_DB_URL = formatConnectionUrl(RAW_MAIN_URL);
-const AUTH_DB_URL = formatConnectionUrl(RAW_AUTH_URL);
 
 // Debug Logs
 console.group("🔌 Database Connection Debug");
-console.log("Main DB Status:", MAIN_DB_URL ? "✅ Ready" : "❌ Missing URL");
-console.log("Auth DB Status:", AUTH_DB_URL ? "✅ Ready" : "❌ Missing URL");
+console.log("Database URL:", MAIN_DB_URL ? "✅ Ready" : "❌ Missing URL");
 console.groupEnd();
 
-// Initialize Clients
-const sqlMain = MAIN_DB_URL ? neon(MAIN_DB_URL) : null;
-const sqlAuth = AUTH_DB_URL ? neon(AUTH_DB_URL) : null;
+// Initialize Client (Single Source of Truth)
+const sql = MAIN_DB_URL ? neon(MAIN_DB_URL) : null;
 
 export const NeonService = {
   
-  isConnected: () => !!sqlMain,
-  isAuthConnected: () => !!sqlAuth,
+  isConnected: () => !!sql,
+  isAuthConnected: () => !!sql, // Backward compatibility alias
 
   /**
    * Initializes schema in MAIN DB.
+   * Now includes full user profile fields since we removed external Auth DB.
    */
   async initSchema() {
-    if (!sqlMain) return;
+    if (!sql) return;
 
     try {
-      await sqlMain`
+      // 1. Base Users Table
+      await sql`
         CREATE TABLE IF NOT EXISTS users (
           email TEXT PRIMARY KEY,
+          password TEXT,
+          name TEXT,
+          company_name TEXT,
+          logo_url TEXT,
+          plan TEXT DEFAULT 'free',
+          role TEXT DEFAULT 'user',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `;
 
-      await sqlMain`
+      // 2. Migrations: Add columns if table existed from previous version but lacked auth fields
+      // This ensures we don't break existing data, but we enable the new features.
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT`; } catch (e) {}
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT`; } catch (e) {}
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name TEXT`; } catch (e) {}
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS logo_url TEXT`; } catch (e) {}
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free'`; } catch (e) {}
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user'`; } catch (e) {}
+
+      // 3. Uploads Table
+      await sql`
         CREATE TABLE IF NOT EXISTS uploads (
           id SERIAL PRIMARY KEY,
           user_email TEXT REFERENCES users(email),
@@ -89,7 +97,8 @@ export const NeonService = {
         )
       `;
 
-      await sqlMain`
+      // 4. Prospects Table
+      await sql`
         CREATE TABLE IF NOT EXISTS prospects (
           id TEXT PRIMARY KEY,
           upload_id INTEGER REFERENCES uploads(id),
@@ -99,34 +108,51 @@ export const NeonService = {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `;
+      
       console.log('✅ Main DB Schema Synced');
+
+      // 5. Seed default admin if empty (Optional helper for quick start)
+      const userCount = await sql`SELECT count(*) FROM users`;
+      if (Number(userCount[0].count) === 0) {
+          console.log("🌱 Seeding default admin user...");
+          await sql`
+            INSERT INTO users (email, password, name, company_name, plan, role)
+            VALUES (
+                'admin@humanflow.com', 
+                'admin', 
+                'Admin HumanFlow', 
+                'HumanFlow HQ', 
+                'unlimited', 
+                'admin'
+            )
+          `;
+      }
+
     } catch (error) {
       console.error('❌ Error initializing Main DB:', error);
     }
   },
 
   /**
-   * Login Logic: Queries 'companies' table in Auth DB.
+   * Login Logic: Queries 'users' table in the MAIN DB.
    */
   async loginUser(email: string, password: string): Promise<User | null> {
     const cleanEmail = email.toLowerCase().trim();
 
-    // --- 🚀 DEMO MODE ACCESS (Bypass DB) ---
+    // --- 🚀 DEMO MODE ACCESS (Bypass DB entirely) ---
     if (cleanEmail === 'demo@humanflow.com' && password === 'demo') {
         console.log("🚀 ACCESS GRANTED: DEMO MODE ENABLED");
-
-        // Attempt to sync Demo user to Main DB so history works if DB is connected
-        if (sqlMain) {
+        
+        // Sync Demo user to DB if connected, just so foreign keys work
+        if (sql) {
             try {
-                await sqlMain`
-                    INSERT INTO users (email) 
-                    VALUES (${cleanEmail})
+                await sql`
+                    INSERT INTO users (email, name, company_name) 
+                    VALUES (${cleanEmail}, 'Usuario Demo', 'HumanFlow Demo')
                     ON CONFLICT (email) 
                     DO UPDATE SET last_seen = CURRENT_TIMESTAMP
                 `;
-            } catch (e) {
-                console.warn("Could not sync demo user to DB (History might not save, but app will work):", e);
-            }
+            } catch (e) {}
         }
 
         return {
@@ -140,79 +166,63 @@ export const NeonService = {
         };
     }
     
-    if (!sqlAuth) {
-        console.error("❌ Fatal: Auth Database connection not initialized.");
+    // --- REAL DB LOGIN ---
+    if (!sql) {
+        console.error("❌ Fatal: Database connection not initialized.");
         return null;
     }
 
     try {
-        console.log(`🔐 Authenticating ${cleanEmail}...`);
+        console.log(`🔐 Authenticating ${cleanEmail} against Main DB...`);
         
-        // STEP 1: Find user by email (Case Insensitive using LOWER)
-        const companies = await sqlAuth`
+        const users = await sql`
             SELECT * 
-            FROM companies 
+            FROM users 
             WHERE LOWER(email) = ${cleanEmail}
         `;
 
-        if (companies.length === 0) {
-            console.warn(`❌ Login Failed: No account found with email '${cleanEmail}' in table 'companies'.`);
+        if (users.length === 0) {
+            console.warn(`❌ Login Failed: User not found.`);
             return null;
         }
 
-        const company = companies[0];
-        
-        // STEP 2: Verify Password
-        const dbPassword = String(company.password || '');
+        const user = users[0];
+        const dbPassword = String(user.password || '');
         const inputPassword = String(password || '');
 
+        // Note: In production, use bcrypt/argon2. For this app scope, text comparison is used.
         if (dbPassword !== inputPassword) {
-            console.group("❌ Login Failed: Password Mismatch");
-            console.log("Email Found:", cleanEmail);
-            console.warn("Password mismatch. Use Demo Mode (demo@humanflow.com / demo) if you are testing.");
-            console.groupEnd();
+            console.warn("❌ Login Failed: Password mismatch.");
             return null;
         }
 
         console.log("✅ Login Successful");
 
-        const userProfile: User = {
-            id: company.id,
-            email: company.email,
-            name: company.contact_name || company.name || company.company_name || cleanEmail.split('@')[0],
-            company_name: company.company_name || company.name || "Mi Empresa",
-            logo_url: company.logo_url,
-            plan: company.plan,
-            role: company.role
+        // Update Last Seen
+        try {
+            await sql`UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE email = ${cleanEmail}`;
+        } catch(e) {}
+
+        return {
+            id: user.id || cleanEmail, // Fallback ID
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            company_name: user.company_name || "Mi Empresa",
+            logo_url: user.logo_url,
+            plan: user.plan,
+            role: user.role
         };
 
-        // Sync to Main DB for reference
-        if (sqlMain) {
-            try {
-                await sqlMain`
-                    INSERT INTO users (email) 
-                    VALUES (${cleanEmail})
-                    ON CONFLICT (email) 
-                    DO UPDATE SET last_seen = CURRENT_TIMESTAMP
-                `;
-            } catch (syncErr) {
-                console.warn("⚠️ Main DB Sync Warning:", syncErr);
-            }
-        }
-
-        return userProfile;
-
     } catch (err) {
-        console.error("⚠️ Auth DB Error (Check console for query details):", err);
+        console.error("⚠️ Database Error during login:", err);
         return null;
     }
   },
 
   async saveSession(email: string, filename: string, sheetName: string, mapping: any, prospects: Prospect[]) {
     // Graceful fallback for Demo/Local mode if DB is missing
-    if (!sqlMain) {
+    if (!sql) {
         console.warn("⚠️ SAVE SKIPPED: No DB Connection. Operating in Local Mode.");
-        // Return a mock ID (-1) to allow the app flow to continue
         return -1;
     }
 
@@ -223,7 +233,7 @@ export const NeonService = {
     }));
 
     // Create Upload Record
-    const uploadResult = await sqlMain`
+    const uploadResult = await sql`
         INSERT INTO uploads (user_email, filename, sheet_name, mapped_config)
         VALUES (${email}, ${filename}, ${sheetName}, ${mapping})
         RETURNING id
@@ -235,7 +245,7 @@ export const NeonService = {
     for (let i = 0; i < prospectsWithStatus.length; i += batchSize) {
         const chunk = prospectsWithStatus.slice(i, i + batchSize);
         await Promise.all(chunk.map(p => {
-             return sqlMain`
+             return sql`
                 INSERT INTO prospects (id, upload_id, user_email, data, status)
                 VALUES (${p.id}, ${uploadId}, ${email}, ${p}, ${p.estado})
             `;
@@ -246,9 +256,9 @@ export const NeonService = {
   },
 
   async updateProspectStatus(prospectId: string, newStatus: string) {
-    if (!sqlMain) return;
+    if (!sql) return;
     try {
-        await sqlMain`
+        await sql`
             UPDATE prospects 
             SET status = ${newStatus}, updated_at = CURRENT_TIMESTAMP 
             WHERE id = ${prospectId}
@@ -257,9 +267,9 @@ export const NeonService = {
   },
 
   async getUserUploads(email: string): Promise<UploadRecord[]> {
-      if (!sqlMain) return [];
+      if (!sql) return [];
       try {
-        const result = await sqlMain`
+        const result = await sql`
             SELECT 
                 u.id, u.filename, u.sheet_name, u.created_at,
                 COUNT(p.id) as total_prospects,
@@ -287,15 +297,14 @@ export const NeonService = {
   },
 
   async getSessionProspects(uploadId: number): Promise<{ prospects: Prospect[], mapping: any }> {
-      // If we are in mock mode (id -1), throw because we can't resume from nothing
       if (uploadId === -1) throw new Error("Local session cannot be resumed.");
       
-      if (!sqlMain) throw new Error("No Data Connection");
+      if (!sql) throw new Error("No Data Connection");
       
-      const uploadRes = await sqlMain`SELECT mapped_config FROM uploads WHERE id = ${uploadId}`;
+      const uploadRes = await sql`SELECT mapped_config FROM uploads WHERE id = ${uploadId}`;
       if (!uploadRes.length) throw new Error("Upload not found");
       
-      const prospectsRes = await sqlMain`SELECT data, status FROM prospects WHERE upload_id = ${uploadId}`;
+      const prospectsRes = await sql`SELECT data, status FROM prospects WHERE upload_id = ${uploadId}`;
       const prospects = prospectsRes.map(row => ({
           ...row.data as Prospect,
           estado: row.status
