@@ -78,12 +78,11 @@ const App: React.FC = () => {
     addNotification("Sesión cerrada correctamente", "info");
   };
 
-  // STRICT LOGIN HANDLER - NOW VALIDATES EVERYONE AGAINST DB
+  // STRICT LOGIN HANDLER
   const handleLogin = async (email: string, password: string): Promise<boolean> => {
       setState(prev => ({ ...prev, isLoading: true }));
       
       try {
-          // Strict check: We must be connected to the DB
           if (!NeonService.isConnected()) {
               addNotification("Error: No hay conexión a la base de datos.", "error");
               setState(prev => ({ ...prev, isLoading: false }));
@@ -93,13 +92,11 @@ const App: React.FC = () => {
           const fetchedProfile = await NeonService.loginUser(email, password);
           
           if (fetchedProfile) {
-              // Success
               localStorage.setItem(SESSION_KEY, JSON.stringify(fetchedProfile));
               setState(prev => ({ ...prev, currentUser: fetchedProfile, isLoading: false }));
               addNotification(`¡Bienvenido, ${fetchedProfile.name || email}! 👋`, "success");
               return true;
           } else {
-              // Failed credentials
               addNotification("Credenciales incorrectas.", "error");
               setState(prev => ({ ...prev, isLoading: false }));
               return false;
@@ -108,6 +105,28 @@ const App: React.FC = () => {
       } catch (error) {
           console.error(error);
           addNotification("Error de conexión al servidor.", "error");
+          setState(prev => ({ ...prev, isLoading: false }));
+          return false;
+      }
+  };
+
+  // REGISTER HANDLER
+  const handleRegister = async (email: string, pass: string, name: string, company: string): Promise<boolean> => {
+      setState(prev => ({ ...prev, isLoading: true }));
+      try {
+           const result = await NeonService.registerUser(email, pass, name, company);
+           if (result.success && result.user) {
+               localStorage.setItem(SESSION_KEY, JSON.stringify(result.user));
+               setState(prev => ({ ...prev, currentUser: result.user!, isLoading: false }));
+               addNotification("¡Cuenta creada! Bienvenido a HumanFlow ✨", "success");
+               return true;
+           } else {
+               addNotification(result.error || "Error al registrarse", "error");
+               setState(prev => ({ ...prev, isLoading: false }));
+               return false;
+           }
+      } catch (error) {
+          addNotification("Error de conexión.", "error");
           setState(prev => ({ ...prev, isLoading: false }));
           return false;
       }
@@ -284,6 +303,7 @@ const App: React.FC = () => {
         <ConnectScreen 
             onFileSelect={handleFileSelect}
             onLogin={handleLogin}
+            onRegister={handleRegister}
             isLoading={state.isLoading} 
             currentUser={state.currentUser}
             onLogout={handleLogout}

@@ -121,6 +121,53 @@ export const NeonService = {
   },
 
   /**
+   * Registers a new user with hashed password
+   */
+  async registerUser(email: string, password: string, name: string, companyName: string): Promise<{ success: boolean; user?: User; error?: string }> {
+      const cleanEmail = email.toLowerCase().trim();
+      
+      if (!sql) return { success: false, error: "Sin conexión a DB" };
+
+      try {
+          // 1. Check if user exists
+          const existing = await sql`SELECT email FROM users WHERE email = ${cleanEmail}`;
+          if (existing.length > 0) {
+              return { success: false, error: "El correo ya está registrado." };
+          }
+
+          // 2. Hash Password
+          const salt = await bcrypt.genSalt(10);
+          const hash = await bcrypt.hash(password, salt);
+
+          // 3. Insert User
+          const result = await sql`
+              INSERT INTO users (email, password, name, company_name, plan, role)
+              VALUES (${cleanEmail}, ${hash}, ${name}, ${companyName}, 'free', 'user')
+              RETURNING email, name, company_name, logo_url, plan, role
+          `;
+
+          const user = result[0];
+
+          return { 
+              success: true, 
+              user: {
+                  id: user.email,
+                  email: user.email,
+                  name: user.name,
+                  company_name: user.company_name,
+                  logo_url: user.logo_url,
+                  plan: user.plan,
+                  role: user.role
+              }
+          };
+
+      } catch (err) {
+          console.error("Registration Error:", err);
+          return { success: false, error: "Error al crear cuenta." };
+      }
+  },
+
+  /**
    * Login Logic with Security Upgrade
    * Checks for Bcrypt hash. If plain text matches, upgrades to Bcrypt.
    */

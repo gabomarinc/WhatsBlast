@@ -5,6 +5,7 @@ import { NeonService } from '../services/neon';
 interface ConnectScreenProps {
   onFileSelect: (file: File) => void;
   onLogin: (email: string, pass: string) => Promise<boolean>;
+  onRegister: (email: string, pass: string, name: string, company: string) => Promise<boolean>;
   isLoading: boolean;
   currentUser?: User | null;
   onLogout?: () => void;
@@ -12,11 +13,12 @@ interface ConnectScreenProps {
 }
 
 // View state for the right panel
-type AuthView = 'login' | 'forgot' | 'reset';
+type AuthView = 'login' | 'forgot' | 'reset' | 'register';
 
 export const ConnectScreen: React.FC<ConnectScreenProps> = ({ 
   onFileSelect, 
   onLogin,
+  onRegister,
   isLoading,
   currentUser,
   onLogout,
@@ -27,12 +29,18 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   // Login State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Register State
+  const [newName, setNewName] = useState('');
+  const [newCompany, setNewCompany] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
   
   // Recovery State
   const [authView, setAuthView] = useState<AuthView>('login');
   const [recoveryCode, setRecoveryCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirm, setResetConfirm] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +98,23 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
      await onLogin(email, password);
   };
 
+  const handleRegisterClick = async () => {
+      if (!email || !newName || !newCompany || !newPass) {
+          setError("Todos los campos son obligatorios.");
+          return;
+      }
+      if (newPass.length < 5) {
+          setError("La contraseña debe tener al menos 5 caracteres.");
+          return;
+      }
+      if (newPass !== confirmPass) {
+          setError("Las contraseñas no coinciden.");
+          return;
+      }
+      setError(null);
+      await onRegister(email, newPass, newName, newCompany);
+  };
+
   const handleRequestRecovery = async () => {
       if (!email || !email.includes('@')) {
           setError("Ingresa un correo válido para recuperar.");
@@ -110,16 +135,16 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   };
 
   const handleResetConfirm = async () => {
-      if (!recoveryCode || newPassword.length < 4) {
+      if (!recoveryCode || resetPassword.length < 4) {
           setError("Código o contraseña inválidos (min 4 chars).");
           return;
       }
-      if (newPassword !== confirmPassword) {
+      if (resetPassword !== resetConfirm) {
           setError("Las contraseñas no coinciden.");
           return;
       }
 
-      const res = await NeonService.confirmPasswordReset(email, recoveryCode, newPassword);
+      const res = await NeonService.confirmPasswordReset(email, recoveryCode, resetPassword);
       if (res.success) {
           setSuccessMsg("¡Contraseña actualizada! Inicia sesión.");
           setAuthView('login');
@@ -153,6 +178,12 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   }
 
   const isFormValid = email.length > 0 && password.length > 0;
+  
+  const switchView = (view: AuthView) => {
+      setAuthView(view);
+      setError(null);
+      setSuccessMsg(null);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-white relative overflow-hidden">
@@ -247,16 +278,24 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
             <div className="mb-8 flex justify-between items-end">
                 <div>
                     <h2 className="text-xl font-black text-secondary-800 mb-1">
-                        {currentUser ? 'Nueva Carga' : authView === 'login' ? 'Acceso' : 'Recuperación'}
+                        {currentUser 
+                            ? 'Nueva Carga' 
+                            : authView === 'login' 
+                                ? 'Acceso' 
+                                : authView === 'register' 
+                                    ? 'Crear Cuenta'
+                                    : 'Recuperación'}
                     </h2>
                     <p className="text-sm text-secondary-400 font-medium">
                         {currentUser 
                            ? 'Sube un Excel para iniciar una nueva campaña.' 
                            : authView === 'login' 
                               ? 'Ingresa tus credenciales para continuar.'
-                              : authView === 'forgot'
-                                ? 'Ingresa tu correo para recibir un código.'
-                                : 'Establece tu nueva contraseña.'
+                              : authView === 'register'
+                                ? 'Completa tus datos para empezar.'
+                                : authView === 'forgot'
+                                    ? 'Ingresa tu correo para recibir un código.'
+                                    : 'Establece tu nueva contraseña.'
                         }
                     </p>
                 </div>
@@ -295,8 +334,11 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                                 />
                             </div>
 
-                            <div className="flex justify-end">
-                                <button onClick={() => { setAuthView('forgot'); setError(null); }} className="text-xs font-bold text-primary-600 hover:underline">
+                            <div className="flex justify-between items-center mt-2">
+                                <button onClick={() => switchView('register')} className="text-xs font-bold text-secondary-500 hover:text-primary-600 hover:underline">
+                                    ¿No tienes cuenta? Regístrate
+                                </button>
+                                <button onClick={() => switchView('forgot')} className="text-xs font-bold text-primary-600 hover:underline">
                                     ¿Olvidaste tu contraseña?
                                 </button>
                             </div>
@@ -308,6 +350,84 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                                     className={`w-full py-4 rounded-xl font-black text-sm transition-all transform active:scale-[0.98] ${isLoading || !isFormValid ? 'bg-secondary-100 text-secondary-400 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600 shadow-xl shadow-primary-500/30'}`}
                                 >
                                     {isLoading ? 'Verificando...' : 'Iniciar Sesión →'}
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {/* VIEW: REGISTER */}
+                    {authView === 'register' && (
+                        <>
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="group">
+                                    <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Tu Nombre</label>
+                                    <input 
+                                        type="text"
+                                        value={newName}
+                                        onChange={(e) => setNewName(e.target.value)}
+                                        className="w-full px-4 py-3 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all"
+                                        placeholder="Ana García"
+                                    />
+                                </div>
+                                <div className="group">
+                                    <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Empresa</label>
+                                    <input 
+                                        type="text"
+                                        value={newCompany}
+                                        onChange={(e) => setNewCompany(e.target.value)}
+                                        className="w-full px-4 py-3 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all"
+                                        placeholder="Mi Negocio"
+                                    />
+                                </div>
+                             </div>
+                             
+                             <div className="group">
+                                <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Correo Electrónico</label>
+                                <input 
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-4 py-3 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all"
+                                    placeholder="tucorreo@ejemplo.com"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="group">
+                                    <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Contraseña</label>
+                                    <input 
+                                        type="password"
+                                        value={newPass}
+                                        onChange={(e) => setNewPass(e.target.value)}
+                                        className="w-full px-4 py-3 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all"
+                                        placeholder="••••••"
+                                    />
+                                </div>
+                                <div className="group">
+                                    <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Confirmar</label>
+                                    <input 
+                                        type="password"
+                                        value={confirmPass}
+                                        onChange={(e) => setConfirmPass(e.target.value)}
+                                        className="w-full px-4 py-3 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all"
+                                        placeholder="••••••"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-2 flex flex-col gap-3">
+                                <button
+                                    onClick={handleRegisterClick}
+                                    disabled={isLoading}
+                                    className={`w-full py-4 rounded-xl font-black text-sm transition-all transform active:scale-[0.98] ${isLoading ? 'bg-secondary-100 text-secondary-400 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600 shadow-xl shadow-primary-500/30'}`}
+                                >
+                                    {isLoading ? 'Creando cuenta...' : 'Registrarse'}
+                                </button>
+                                <button
+                                    onClick={() => switchView('login')}
+                                    className="w-full py-3 rounded-xl font-bold text-xs text-secondary-500 hover:bg-secondary-100 transition-all"
+                                >
+                                    Volver al Login
                                 </button>
                             </div>
                         </>
@@ -334,7 +454,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                                     Enviar Código
                                 </button>
                                 <button
-                                    onClick={() => { setAuthView('login'); setError(null); }}
+                                    onClick={() => switchView('login')}
                                     className="w-full py-3 rounded-xl font-bold text-xs text-secondary-500 hover:bg-secondary-100 transition-all"
                                 >
                                     Cancelar
@@ -361,8 +481,8 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                                 <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Nueva Contraseña</label>
                                 <input 
                                     type="password"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    value={resetPassword}
+                                    onChange={(e) => setResetPassword(e.target.value)}
                                     className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500"
                                     placeholder="Nueva contraseña"
                                 />
@@ -370,8 +490,8 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                             <div className="group">
                                 <input 
                                     type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    value={resetConfirm}
+                                    onChange={(e) => setResetConfirm(e.target.value)}
                                     className="w-full px-5 py-4 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500"
                                     placeholder="Confirmar contraseña"
                                 />
@@ -385,7 +505,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                                     Actualizar Contraseña
                                 </button>
                                 <button
-                                    onClick={() => { setAuthView('login'); setError(null); }}
+                                    onClick={() => switchView('login')}
                                     className="w-full py-3 rounded-xl font-bold text-xs text-secondary-500 hover:bg-secondary-100 transition-all"
                                 >
                                     Volver al Login
