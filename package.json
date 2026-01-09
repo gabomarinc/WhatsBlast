@@ -12,11 +12,13 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "xlsx": "^0.18.5",
-    "@neondatabase/serverless": "^0.9.0"
+    "@neondatabase/serverless": "^0.9.0",
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
+    "@types/bcryptjs": "^2.4.6",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
