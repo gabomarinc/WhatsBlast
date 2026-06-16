@@ -7,13 +7,15 @@ interface ProspectCardProps {
   onSend: (prospect: Prospect) => void;
   isSentInSession?: boolean;
   visibleColumns?: string[]; // New prop for dynamic columns
+  isSelected?: boolean; // Active selection for keyboard navigation
 }
 
 export const ProspectCard: React.FC<ProspectCardProps> = ({ 
   prospect, 
   onSend, 
   isSentInSession = false,
-  visibleColumns = [] 
+  visibleColumns = [],
+  isSelected = false
 }) => {
   
   // Determine status color based on standard keywords or user data
@@ -36,7 +38,23 @@ export const ProspectCard: React.FC<ProspectCardProps> = ({
   const isDone = isSentInSession || status.includes('contactado') || status.includes('éxito');
 
   return (
-    <div className={`bg-white p-6 rounded-2xl shadow-sm border transition-all duration-300 flex flex-col justify-between group h-full ${isDone ? 'border-primary-100 opacity-80' : 'border-secondary-100 hover:shadow-lg hover:shadow-secondary-100/50 hover:border-primary-200'}`}>
+    <div 
+      id={`card-${prospect.id}`}
+      className={`bg-white p-6 rounded-2xl shadow-sm border transition-all duration-300 flex flex-col justify-between group h-full relative ${
+        isSelected 
+          ? 'border-primary-500 ring-2 ring-primary-100 shadow-lg shadow-primary-50/50 scale-[1.02]' 
+          : isDone 
+            ? 'border-primary-100 opacity-80' 
+            : 'border-secondary-100 hover:shadow-lg hover:shadow-secondary-100/50 hover:border-primary-200'
+      }`}
+    >
+      {/* Active Shortcut Hint */}
+      {isSelected && !isDone && (
+        <span className="absolute -top-2.5 right-6 bg-primary-500 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-full shadow-sm animate-pulse tracking-wider">
+          Presiona Enter
+        </span>
+      )}
+
       <div>
         <div className="flex justify-between items-start mb-4">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl transition-colors shrink-0 ${isDone ? 'bg-primary-50 text-primary-600' : 'bg-gradient-to-tr from-primary-100 to-primary-50 text-primary-600'}`}>
@@ -79,9 +97,15 @@ export const ProspectCard: React.FC<ProspectCardProps> = ({
         <Button 
           variant={isDone ? "ghost" : "outline"} 
           onClick={() => onSend(prospect)} 
-          className={`w-full !py-2.5 !text-xs !font-bold transition-all ${isDone ? 'bg-secondary-50 text-secondary-400 hover:bg-secondary-100 cursor-default' : 'group-hover:bg-primary-500 group-hover:text-white group-hover:border-transparent group-hover:shadow-lg group-hover:shadow-primary-200'}`}
+          className={`w-full !py-2.5 !text-xs !font-bold transition-all ${
+            isSelected 
+              ? 'bg-primary-500 text-white border-transparent shadow-lg shadow-primary-200' 
+              : isDone 
+                ? 'bg-secondary-50 text-secondary-400 hover:bg-secondary-100 cursor-default' 
+                : 'group-hover:bg-primary-500 group-hover:text-white group-hover:border-transparent group-hover:shadow-lg group-hover:shadow-primary-200'
+          }`}
         >
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2 justify-center w-full">
             {isDone ? (
                 <>
                 <span>Reenviar Mensaje</span>

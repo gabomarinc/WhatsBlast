@@ -240,6 +240,76 @@ const App: React.FC = () => {
     return { total, pending, sessionSentCount, contactedTotal, totalDatabase };
   }, [prospectsFilteredByColumns, prospects, sentIds]);
 
+  const [selectedProspectId, setSelectedProspectId] = useState<string | null>(null);
+  const [isBurstMode, setIsBurstMode] = useState<boolean>(true);
+
+  // Auto-select the first prospect in the displayed list if none or invalid is selected
+  useEffect(() => {
+    if (displayProspects.length > 0) {
+      const exists = displayProspects.some(p => p.id === selectedProspectId);
+      if (!exists) {
+        setSelectedProspectId(displayProspects[0].id);
+      }
+    } else {
+      setSelectedProspectId(null);
+    }
+  }, [displayProspects, selectedProspectId]);
+
+  const scrollToSelectedCard = (id: string) => {
+    setTimeout(() => {
+      const element = document.getElementById(`card-${id}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 50);
+  };
+
+  // Keyboard navigation listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (state.step !== 'dashboard' || activeTab !== 'list' || displayProspects.length === 0) {
+        return;
+      }
+
+      if (
+        document.activeElement?.tagName === 'INPUT' || 
+        document.activeElement?.tagName === 'SELECT' || 
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+
+      const currentIndex = displayProspects.findIndex(p => p.id === selectedProspectId);
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % displayProspects.length;
+        const nextId = displayProspects[nextIndex].id;
+        setSelectedProspectId(nextId);
+        scrollToSelectedCard(nextId);
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const prevIndex = currentIndex === -1 ? 0 : (currentIndex - 1 + displayProspects.length) % displayProspects.length;
+        const prevId = displayProspects[prevIndex].id;
+        setSelectedProspectId(prevId);
+        scrollToSelectedCard(prevId);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedProspectId) {
+          const currentProspect = displayProspects.find(p => p.id === selectedProspectId);
+          if (currentProspect) {
+            handleSendMessage(currentProspect);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [state.step, activeTab, displayProspects, selectedProspectId]);
+
   const handleConfigurationConfirm = async (tabName: string, mapping: ColumnMapping) => {
     if (!state.workbook) return;
     setState(prev => ({ ...prev, isLoading: true, selectedTab: tabName, mapping }));
@@ -318,6 +388,20 @@ const App: React.FC = () => {
         if (p.id === prospect.id) return { ...p, estado: 'Contactado' };
         return p;
     }));
+
+    // If burst mode is on, advance selection automatically to the next pending prospect
+    if (isBurstMode) {
+      const currentIndex = displayProspects.findIndex(p => p.id === prospect.id);
+      const remainingProspects = displayProspects.filter(p => p.id !== prospect.id);
+      if (remainingProspects.length > 0) {
+        const nextIndex = currentIndex < displayProspects.length - 1 ? currentIndex : 0;
+        const nextProspect = remainingProspects[Math.min(nextIndex, remainingProspects.length - 1)];
+        if (nextProspect) {
+          setSelectedProspectId(nextProspect.id);
+          scrollToSelectedCard(nextProspect.id);
+        }
+      }
+    }
 
     window.open(url, 'HumanFlowWhatsApp');
   };
@@ -522,10 +606,26 @@ const App: React.FC = () => {
                         Historial
                     </button>
                  </div>
-                 
-                 <span className="text-xs font-bold text-secondary-400 bg-secondary-50 px-3 py-1.5 rounded-lg border border-secondary-100">
-                    {displayProspects.length} registros visibles
-                 </span>
+                  
+                  <div className="flex items-center gap-4">
+                     <label className="flex items-center gap-2 cursor-pointer select-none">
+                       <span className="text-xs font-black text-secondary-500 uppercase tracking-wider">⚡ Modo Ráfaga</span>
+                       <div className="relative text-left">
+                         <input 
+                           type="checkbox" 
+                           className="sr-only" 
+                           checked={isBurstMode}
+                           onChange={() => setIsBurstMode(!isBurstMode)}
+                         />
+                         <div className={`w-9 h-5 rounded-full transition-colors ${isBurstMode ? 'bg-primary-500' : 'bg-secondary-200'}`}></div>
+                         <div className={`absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${isBurstMode ? 'translate-x-4' : ''}`}></div>
+                       </div>
+                     </label>
+                     
+                     <span className="text-xs font-bold text-secondary-400 bg-secondary-50 px-3 py-1.5 rounded-lg border border-secondary-100">
+                        {displayProspects.length} registros visibles
+                     </span>
+                  </div>
               </div>
 
               {state.mapping.filterableColumns.length > 0 && (
@@ -566,6 +666,7 @@ const App: React.FC = () => {
                         onSend={handleSendMessage} 
                         isSentInSession={sentIds.has(p.id)}
                         visibleColumns={state.mapping.visibleColumns}
+                        isSelected={p.id === selectedProspectId}
                     />
                   ))}
                 </div>
@@ -611,6 +712,26 @@ const App: React.FC = () => {
                   localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser));
               }}
           />
+      )}
+
+      {/* Floating keyboard hint bar */}
+      {state.step === 'dashboard' && activeTab === 'list' && displayProspects.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-secondary-900/90 backdrop-blur-md text-white py-3 px-6 rounded-full shadow-2xl border border-secondary-800 flex items-center gap-4 text-xs font-medium z-40 transition-all duration-300">
+          <span className="flex items-center gap-1.5 text-primary-400">
+            <span className="bg-primary-500/20 text-primary-300 border border-primary-500/30 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">Enter</span>
+            <span>Enviar</span>
+          </span>
+          <span className="text-secondary-600">|</span>
+          <span className="flex items-center gap-1.5 text-secondary-300">
+            <span className="bg-secondary-800 border border-secondary-750 px-1.5 py-0.5 rounded text-[10px] font-mono">↑ ↓</span>
+            <span>Navegar</span>
+          </span>
+          <span className="text-secondary-600">|</span>
+          <span className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${isBurstMode ? 'bg-primary-400 animate-pulse' : 'bg-secondary-500'}`}></span>
+            <span className="text-secondary-300">Modo Ráfaga: <strong className={isBurstMode ? 'text-primary-400' : 'text-secondary-400'}>{isBurstMode ? 'ACTIVO' : 'DESACTIVADO'}</strong></span>
+          </span>
+        </div>
       )}
 
       <ToastContainer notifications={notifications} removeNotification={removeNotification} />
