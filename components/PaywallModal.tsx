@@ -58,7 +58,7 @@ const PricingSwitch = ({
         {selected === "0" && (
           <motion.span
             layoutId={switchLayoutId}
-            className="absolute top-0 left-0 h-10 sm:h-12 w-full rounded-full border-[3px] shadow-sm shadow-secondary-900 border-secondary-950 bg-gradient-to-t from-secondary-900 via-secondary-800 to-secondary-900"
+            className="absolute inset-0 rounded-full border-[3px] shadow-sm shadow-secondary-900 border-secondary-950 bg-gradient-to-t from-secondary-900 via-secondary-800 to-secondary-900"
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
           />
         )}
@@ -78,7 +78,7 @@ const PricingSwitch = ({
         {selected === "1" && (
           <motion.span
             layoutId={switchLayoutId}
-            className="absolute top-0 left-0 h-10 sm:h-12 w-full rounded-full border-[3px] shadow-sm shadow-secondary-900 border-secondary-950 bg-gradient-to-t from-secondary-900 via-secondary-800 to-secondary-900"
+            className="absolute inset-0 rounded-full border-[3px] shadow-sm shadow-secondary-900 border-secondary-950 bg-gradient-to-t from-secondary-900 via-secondary-800 to-secondary-900"
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
           />
         )}
@@ -268,7 +268,9 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
                     <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Nombre Completo</label>
                     <input 
                       type="text" 
+                      name="name"
                       required
+                      autoComplete="name"
                       value={name} 
                       onChange={e => setName(e.target.value)}
                       className="w-full px-4 py-3 bg-secondary-50/50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
@@ -279,7 +281,9 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
                     <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Empresa</label>
                     <input 
                       type="text" 
+                      name="organization"
                       required
+                      autoComplete="organization"
                       value={company} 
                       onChange={e => setCompany(e.target.value)}
                       className="w-full px-4 py-3 bg-secondary-50/50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
@@ -290,7 +294,9 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
                     <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Contraseña</label>
                     <input 
                       type="password" 
+                      name="new-password"
                       required
+                      autoComplete="new-password"
                       value={password} 
                       onChange={e => setPassword(e.target.value)}
                       className="w-full px-4 py-3 bg-secondary-50/50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
