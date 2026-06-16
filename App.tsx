@@ -16,6 +16,7 @@ import { AppState, Notification, Prospect, Template, ColumnMapping, User } from 
 import { APP_NAME } from './constants';
 import { AnimatedDock } from './components/ui/animated-dock';
 import { Banner } from './components/ui/banner';
+import { ExpandableTabs } from './components/ui/expandable-tabs';
 import { Users, MessageSquare, BarChart3, Zap } from 'lucide-react';
 
 const SESSION_KEY = 'hf_user_session_v1';
@@ -550,48 +551,37 @@ const App: React.FC = () => {
         />
         
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 mt-12">
-            <div className="hidden md:flex bg-secondary-50 p-1.5 rounded-2xl w-full md:w-auto shadow-inner border border-secondary-100 overflow-x-auto max-w-full">
-                <button 
-                  onClick={() => setActiveTab('list')}
-                  className={`whitespace-nowrap flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
-                    activeTab === 'list' 
-                      ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5' 
-                      : 'text-secondary-500 hover:text-secondary-700'
-                  }`}
-                >
-                  <span>📋</span> Lista de Contactos
-                </button>
-                <button 
-                  onClick={() => setActiveTab('template')}
-                  className={`whitespace-nowrap flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
-                    activeTab === 'template' 
-                      ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5' 
-                      : 'text-secondary-500 hover:text-secondary-700'
-                  }`}
-                >
-                  <span>💬</span> Plantillas
-                </button>
-                <button 
-                  onClick={() => setActiveTab('campaigns')}
-                  className={`whitespace-nowrap flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
-                    activeTab === 'campaigns' 
-                      ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5' 
-                      : 'text-secondary-500 hover:text-secondary-700'
-                  }`}
-                >
-                  <span>📊</span> Mis Campañas
-                </button>
-                <button 
-                  onClick={() => setActiveTab('automate')}
-                  className={`whitespace-nowrap flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
-                    activeTab === 'automate' 
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md ring-1 ring-indigo-500' 
-                      : 'text-indigo-500 bg-indigo-50 hover:bg-indigo-100 ring-1 ring-indigo-200'
-                  }`}
-                >
-                  <span>⚡</span> Automatizar (PRO)
-                </button>
-            </div>
+            <ExpandableTabs
+              className="hidden md:flex"
+              activeTabId={activeTab}
+              onChangeTab={(id) => setActiveTab(id as any)}
+              tabs={[
+                {
+                  id: "list",
+                  icon: Users,
+                  label: "Contactos",
+                  color: "bg-primary-600",
+                },
+                {
+                  id: "template",
+                  icon: MessageSquare,
+                  label: "Plantillas",
+                  color: "bg-secondary-800",
+                },
+                {
+                  id: "campaigns",
+                  icon: BarChart3,
+                  label: "Campañas",
+                  color: "bg-secondary-800",
+                },
+                {
+                  id: "automate",
+                  icon: Zap,
+                  label: "Automatizar (PRO)",
+                  color: "bg-gradient-to-r from-indigo-500 to-purple-600",
+                },
+              ]}
+            />
             
             {activeTab === 'list' && (
                 <div className="flex gap-4">

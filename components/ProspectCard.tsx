@@ -40,7 +40,7 @@ export const ProspectCard: React.FC<ProspectCardProps> = ({
   return (
     <div 
       id={`card-${prospect.id}`}
-      className={`bg-white p-6 rounded-2xl shadow-sm border transition-all duration-300 flex flex-col justify-between group h-full relative ${
+      className={`bg-white p-4 sm:p-6 rounded-2xl shadow-sm border transition-all duration-300 flex flex-col justify-between group h-full relative ${
         isSelected 
           ? 'border-primary-500 ring-2 ring-primary-100 shadow-lg shadow-primary-50/50 scale-[1.02]' 
           : isDone 
@@ -56,8 +56,8 @@ export const ProspectCard: React.FC<ProspectCardProps> = ({
       )}
 
       <div>
-        <div className="flex justify-between items-start mb-4">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl transition-colors shrink-0 ${isDone ? 'bg-primary-50 text-primary-600' : 'bg-gradient-to-tr from-primary-100 to-primary-50 text-primary-600'}`}>
+        <div className="flex justify-between items-start mb-3 sm:mb-4">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-black text-lg sm:text-xl transition-colors shrink-0 ${isDone ? 'bg-primary-50 text-primary-600' : 'bg-gradient-to-tr from-primary-100 to-primary-50 text-primary-600'}`}>
             {isDone ? '✓' : prospect.nombre.charAt(0)}
           </div>
           
@@ -67,17 +67,17 @@ export const ProspectCard: React.FC<ProspectCardProps> = ({
           </span>
         </div>
         
-        <h3 className={`font-black text-xl transition-colors mb-1 tracking-tight ${isDone ? 'text-secondary-400 line-through decoration-secondary-200' : 'text-secondary-800'}`}>
+        <h3 className={`font-black text-base sm:text-xl transition-colors mb-1 tracking-tight ${isDone ? 'text-secondary-400 line-through decoration-secondary-200' : 'text-secondary-800'}`}>
           {prospect.nombre} {prospect.apellido}
         </h3>
         
-        <p className="text-xs text-secondary-500 font-mono tracking-wide mb-4 font-bold">
+        <p className="text-xs text-secondary-500 font-mono tracking-wide mb-3 sm:mb-4 font-bold">
           {prospect.telefono}
         </p>
 
         {/* Dynamic Extra Columns */}
         {visibleColumns.length > 0 && (
-          <div className="space-y-3 mt-4 pt-4 border-t border-secondary-50">
+          <div className="space-y-3 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-secondary-50">
             {visibleColumns.map(col => {
               const val = prospect[col];
               if (!val) return null;
