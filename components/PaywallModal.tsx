@@ -41,7 +41,7 @@ const PricingSwitch = ({
   return (
     <div
       className={cn(
-        "relative z-10 w-full flex rounded-full bg-secondary-50 border border-secondary-200 p-1",
+        "relative z-10 w-full flex rounded-full bg-secondary-100/80 border border-secondary-200/50 p-1",
         className
       )}
     >
@@ -49,10 +49,10 @@ const PricingSwitch = ({
         type="button"
         onClick={() => handleSwitch("0")}
         className={cn(
-          "relative z-10 w-full sm:h-12 h-10 rounded-full sm:px-6 px-3 sm:py-2 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none",
+          "relative z-10 flex-1 sm:h-12 h-10 flex items-center justify-center rounded-full text-xs font-black uppercase tracking-wider transition-colors focus:outline-none",
           selected === "0"
-            ? "text-white animate-pulse"
-            : "text-secondary-500 hover:text-secondary-800"
+            ? "text-white"
+            : "text-secondary-600 hover:text-secondary-900"
         )}
       >
         {selected === "0" && (
@@ -69,10 +69,10 @@ const PricingSwitch = ({
         type="button"
         onClick={() => handleSwitch("1")}
         className={cn(
-          "relative z-10 w-full sm:h-12 h-10 flex-shrink-0 rounded-full sm:px-6 px-3 sm:py-2 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none",
+          "relative z-10 flex-1 sm:h-12 h-10 flex items-center justify-center rounded-full text-xs font-black uppercase tracking-wider transition-colors focus:outline-none",
           selected === "1"
-            ? "text-white animate-pulse"
-            : "text-secondary-500 hover:text-secondary-800"
+            ? "text-white"
+            : "text-secondary-600 hover:text-secondary-900"
         )}
       >
         {selected === "1" && (
@@ -96,6 +96,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
@@ -104,12 +105,16 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
 
   const handleUpgradeClick = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name || !company || !password) {
+    if (!name || !company || !password || !confirmPassword) {
         setError("Por favor completa todos los campos.");
         return;
     }
     if (password.length < 5) {
         setError("La contraseña debe tener al menos 5 caracteres.");
+        return;
+    }
+    if (password !== confirmPassword) {
+        setError("Las contraseñas no coinciden.");
         return;
     }
 
@@ -163,7 +168,6 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
   };
 
   const currentPrice = plan === 'monthly' ? 5 : 50;
-  const originalPrice = plan === 'monthly' ? 10 : 100;
 
   const features = [
     "Contactos y envíos ilimitados",
@@ -251,10 +255,10 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
             {/* Right Panel - Plan Switcher & Register Form */}
             <div className="md:col-span-5 bg-white/60 backdrop-blur-md p-8 rounded-3xl border border-secondary-200/60 shadow-xl space-y-6">
               <div>
-                <h3 className="font-black text-secondary-800 text-lg mb-4">Selecciona tu Plan</h3>
+                <h3 className="font-black text-secondary-800 text-lg mb-4 text-center md:text-left">Selecciona tu Plan</h3>
                 <PricingSwitch
                   button1="Mensual"
-                  button2="Anual (Ahorra 17%)"
+                  button2="Anual (2 Meses GRATIS 🎁)"
                   onSwitch={(val) => setPlan(val === "0" ? "monthly" : "annual")}
                   className="w-full"
                 />
@@ -262,8 +266,21 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
 
               {/* Secure account details */}
               <form onSubmit={handleUpgradeClick} className="space-y-4">
-                <div className="border-t border-secondary-100 pt-4 space-y-4">
+                <div className="border-t border-secondary-100 pt-4 space-y-3">
                   <h4 className="font-black text-xs uppercase tracking-widest text-secondary-400">Datos de tu Cuenta</h4>
+                  
+                  {/* Account Email (Prefilled, Read-Only) */}
+                  <div>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Tu Correo Electrónico</label>
+                    <input 
+                      type="email" 
+                      readOnly
+                      disabled
+                      value={currentUser?.email || ''}
+                      className="w-full px-4 py-3 bg-secondary-100/50 border border-secondary-200 rounded-xl text-xs font-bold text-secondary-500 cursor-not-allowed outline-none"
+                    />
+                  </div>
+
                   <div>
                     <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Nombre Completo</label>
                     <input 
@@ -277,6 +294,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
                       placeholder="Ej. Juan Pérez"
                     />
                   </div>
+                  
                   <div>
                     <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Empresa</label>
                     <input 
@@ -290,41 +308,66 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
                       placeholder="Mi Negocio"
                     />
                   </div>
-                  <div>
-                    <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Contraseña</label>
-                    <input 
-                      type="password" 
-                      name="new-password"
-                      required
-                      autoComplete="new-password"
-                      value={password} 
-                      onChange={e => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 bg-secondary-50/50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
-                      placeholder="••••••"
-                    />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Contraseña</label>
+                      <input 
+                        type="password" 
+                        name="new-password"
+                        required
+                        autoComplete="new-password"
+                        value={password} 
+                        onChange={e => setPassword(e.target.value)}
+                        className="w-full px-4 py-3 bg-secondary-50/50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
+                        placeholder="••••••"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Confirmar Contraseña</label>
+                      <input 
+                        type="password" 
+                        name="confirm-password"
+                        required
+                        autoComplete="new-password"
+                        value={confirmPassword} 
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        className="w-full px-4 py-3 bg-secondary-50/50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
+                        placeholder="••••••"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {error && <p className="text-xs font-black text-red-500">{error}</p>}
 
                 {/* Price and CTA */}
-                <div className="flex items-center justify-between border-t border-secondary-100 pt-6">
-                  <div className="flex items-baseline gap-1 text-secondary-800">
-                    <span className="text-3xl font-black">$</span>
-                    <NumberFlow
-                      value={currentPrice}
-                      className="text-4xl font-black"
-                    />
-                    <span className="text-xs text-secondary-500 font-bold">/{plan === 'monthly' ? 'mes' : 'año'}</span>
-                    <span className="text-sm text-secondary-400 line-through ml-2 font-medium">
-                      ${originalPrice}
-                    </span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-secondary-100 pt-6 gap-4">
+                  <div className="flex flex-col">
+                    <div className="flex items-baseline gap-1 text-secondary-800">
+                      <span className="text-3xl font-black">$</span>
+                      <NumberFlow
+                        value={currentPrice}
+                        className="text-4xl font-black"
+                      />
+                      <span className="text-xs text-secondary-500 font-bold">/{plan === 'monthly' ? 'mes' : 'año'}</span>
+                      {plan === 'annual' && (
+                        <span className="text-sm text-secondary-400 line-through ml-2 font-medium">
+                          $60
+                        </span>
+                      )}
+                    </div>
+                    {plan === 'annual' && (
+                      <span className="text-[10px] font-black text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md mt-1 self-start">
+                        ¡2 MESES GRATIS! 🎁
+                      </span>
+                    )}
                   </div>
 
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="text-white text-xs font-black uppercase tracking-wider h-12 px-6 rounded-full border-[3px] shadow-sm shadow-primary-600 border-primary-600 bg-gradient-to-t from-primary-600 via-primary-500 to-primary-600 hover:from-primary-700 hover:to-primary-600 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="text-white text-xs font-black uppercase tracking-wider h-12 px-8 rounded-full border-[3px] shadow-sm shadow-primary-600 border-primary-600 bg-gradient-to-t from-primary-600 via-primary-500 to-primary-600 hover:from-primary-700 hover:to-primary-600 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isLoading ? 'Procesando...' : 'Pagar 💳'}
                   </button>
@@ -363,3 +406,4 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
     </div>
   );
 };
+
