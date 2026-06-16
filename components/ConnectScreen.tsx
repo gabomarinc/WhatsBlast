@@ -6,7 +6,6 @@ import { NeonService } from '../services/neon';
 interface ConnectScreenProps {
   onFileSelect: (file: File) => void;
   onLogin: (email: string, pass: string) => Promise<boolean>;
-  onRegister: (email: string, pass: string, name: string, company: string) => Promise<boolean>;
   onGuestStart: (email: string) => Promise<boolean>;
   isLoading: boolean;
   currentUser?: User | null;
@@ -74,7 +73,6 @@ const CircularBadge = ({ onClick }: { onClick?: () => void }) => (
 export const ConnectScreen: React.FC<ConnectScreenProps> = ({ 
   onFileSelect, 
   onLogin,
-  onRegister,
   onGuestStart,
   isLoading,
   currentUser,

@@ -375,7 +375,6 @@ const App: React.FC = () => {
         <ConnectScreen 
             onFileSelect={handleFileSelect}
             onLogin={handleLogin}
-            onRegister={handleRegister}
             onGuestStart={handleGuestStart}
             isLoading={state.isLoading} 
             currentUser={state.currentUser}
