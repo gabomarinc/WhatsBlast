@@ -86,12 +86,6 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   // Login State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  // Register State
-  const [newName, setNewName] = useState('');
-  const [newCompany, setNewCompany] = useState('');
-  const [newPass, setNewPass] = useState('');
-  const [confirmPass, setConfirmPass] = useState('');
   
   // Recovery State
   const [authView, setAuthView] = useState<AuthView>('guest');
@@ -105,15 +99,12 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   
   // History State
   const [history, setHistory] = useState<UploadRecord[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   useEffect(() => {
     if (currentUser && NeonService.isConnected()) {
-        setIsLoadingHistory(true);
         NeonService.getUserUploads(currentUser.email)
             .then(data => setHistory(data))
-            .catch(console.error)
-            .finally(() => setIsLoadingHistory(false));
+            .catch(console.error);
     }
   }, [currentUser]);
 
@@ -153,23 +144,6 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
      }
      setError(null);
      await onLogin(email, password);
-  };
-
-  const handleRegisterClick = async () => {
-      if (!email || !newName || !newCompany || !newPass) {
-          setError("Todos los campos son obligatorios.");
-          return;
-      }
-      if (newPass.length < 5) {
-          setError("La contraseña debe tener al menos 5 caracteres.");
-          return;
-      }
-      if (newPass !== confirmPass) {
-          setError("Las contraseñas no coinciden.");
-          return;
-      }
-      setError(null);
-      await onRegister(email, newPass, newName, newCompany);
   };
 
   const handleGuestStartClick = async () => {
