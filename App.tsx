@@ -15,6 +15,7 @@ import { NeonService } from './services/neon';
 import { AppState, Notification, Prospect, Template, ColumnMapping, User } from './types';
 import { APP_NAME } from './constants';
 import { AnimatedDock } from './components/ui/animated-dock';
+import { Banner } from './components/ui/banner';
 import { Users, MessageSquare, BarChart3, Zap } from 'lucide-react';
 
 const SESSION_KEY = 'hf_user_session_v1';
@@ -512,10 +513,27 @@ const App: React.FC = () => {
                 title="Cerrar Sesión"
              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-             </button>
-          </div>
+              </button>
+           </div>
         </div>
       </header>
+
+      <Banner
+        id="leadshub-cta-banner"
+        variant="rainbow"
+        className="w-full text-center relative border-b border-secondary-100"
+        height="3.5rem"
+      >
+        <span className="flex items-center gap-2 justify-center text-xs md:text-sm font-bold text-secondary-800 pr-8">
+          🚀 <strong className="text-secondary-900 font-black">¿Listo para automatizar?</strong> Pasa al siguiente nivel integrando la API oficial de WhatsApp con <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-extrabold">LeadsHub</span>
+          <button 
+            onClick={() => setActiveTab('automate')}
+            className="ml-3 px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg text-[10px] md:text-xs font-black shadow-md shadow-indigo-200 transition-all active:scale-95"
+          >
+            Saber Más ➔
+          </button>
+        </span>
+      </Banner>
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         <div className="mb-12">
