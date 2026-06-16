@@ -14,6 +14,8 @@ import { DataService } from './services/dataService';
 import { NeonService } from './services/neon';
 import { AppState, Notification, Prospect, Template, ColumnMapping, User } from './types';
 import { APP_NAME } from './constants';
+import { AnimatedDock } from './components/ui/animated-dock';
+import { Users, MessageSquare, BarChart3, Zap } from 'lucide-react';
 
 const SESSION_KEY = 'hf_user_session_v1';
 
@@ -531,7 +533,7 @@ const App: React.FC = () => {
         />
         
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 mt-12">
-            <div className="bg-secondary-50 p-1.5 rounded-2xl flex w-full md:w-auto shadow-inner border border-secondary-100 overflow-x-auto max-w-full">
+            <div className="hidden md:flex bg-secondary-50 p-1.5 rounded-2xl w-full md:w-auto shadow-inner border border-secondary-100 overflow-x-auto max-w-full">
                 <button 
                   onClick={() => setActiveTab('list')}
                   className={`whitespace-nowrap flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
@@ -743,6 +745,40 @@ const App: React.FC = () => {
             <span className={`w-2 h-2 rounded-full ${isBurstMode ? 'bg-primary-400 animate-pulse' : 'bg-secondary-500'}`}></span>
             <span className="text-secondary-300">Modo Ráfaga: <strong className={isBurstMode ? 'text-primary-400' : 'text-secondary-400'}>{isBurstMode ? 'ACTIVO' : 'DESACTIVADO'}</strong></span>
           </span>
+        </div>
+      )}
+
+      {/* Mobile Bottom Dock Menu */}
+      {state.step === 'dashboard' && (
+        <div className="md:hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-auto">
+          <AnimatedDock 
+            items={[
+              {
+                label: "Contactos",
+                Icon: <Users size={20} />,
+                onClick: () => setActiveTab('list'),
+                isActive: activeTab === 'list'
+              },
+              {
+                label: "Plantillas",
+                Icon: <MessageSquare size={20} />,
+                onClick: () => setActiveTab('template'),
+                isActive: activeTab === 'template'
+              },
+              {
+                label: "Campañas",
+                Icon: <BarChart3 size={20} />,
+                onClick: () => setActiveTab('campaigns'),
+                isActive: activeTab === 'campaigns'
+              },
+              {
+                label: "Automatizar",
+                Icon: <Zap size={20} />,
+                onClick: () => setActiveTab('automate'),
+                isActive: activeTab === 'automate'
+              }
+            ]}
+          />
         </div>
       )}
 
