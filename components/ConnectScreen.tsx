@@ -325,8 +325,8 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
               }
             </p>
 
-            {/* Floating Action Cards & Accent SVGs - Relative to Title Stack */}
-            <div className="absolute inset-0 w-full h-full pointer-events-none z-20">
+            {/* Floating Action Cards & Accent SVGs - Only shown on larger screens to keep mobile neat and uncrowded */}
+            <div className="hidden lg:block absolute inset-0 w-full h-full pointer-events-none z-20">
             
               {/* Floating Auth Card (Left) */}
               <motion.div 

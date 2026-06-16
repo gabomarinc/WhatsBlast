@@ -258,7 +258,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
                 <h3 className="font-black text-secondary-800 text-lg mb-4 text-center md:text-left">Selecciona tu Plan</h3>
                 <PricingSwitch
                   button1="Mensual"
-                  button2="Anual (2 Meses GRATIS 🎁)"
+                  button2="Anual (2 Meses GRATIS)"
                   onSwitch={(val) => setPlan(val === "0" ? "monthly" : "annual")}
                   className="w-full"
                 />
@@ -359,7 +359,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
                     </div>
                     {plan === 'annual' && (
                       <span className="text-[10px] font-black text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md mt-1 self-start">
-                        ¡2 MESES GRATIS! 🎁
+                        ¡2 MESES GRATIS!
                       </span>
                     )}
                   </div>
