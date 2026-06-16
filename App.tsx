@@ -594,7 +594,10 @@ const App: React.FC = () => {
                         <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
                     ))}
                   </select>
-                  <button onClick={handleExportExcel} className="px-6 py-2.5 bg-green-50 text-green-700 rounded-xl font-bold text-sm hover:bg-green-100 transition-colors flex items-center gap-2 border border-green-200">
+                   <button 
+                    onClick={handleExportExcel} 
+                    className="px-4 py-2 bg-white border border-secondary-200 text-secondary-600 rounded-xl font-bold text-sm hover:text-secondary-800 hover:border-secondary-300 hover:bg-secondary-50/50 transition-all flex items-center gap-2 shadow-sm active:scale-97 select-none outline-none"
+                  >
                       <span>⬇️</span> Exportar Excel
                   </button>
                 </div>

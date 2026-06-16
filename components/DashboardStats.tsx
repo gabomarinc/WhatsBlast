@@ -65,7 +65,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
           className="flex w-full rounded-2xl overflow-hidden bg-white border border-secondary-200 shadow-xl shadow-secondary-100/10 min-h-[140px]"
         >
           {/* Left Panel */}
-          <div className="w-2/5 p-5 flex flex-col justify-between text-white bg-gradient-to-br from-primary-500 to-primary-700">
+          <div className="w-2/5 p-5 flex flex-col justify-between text-white bg-gradient-to-br from-primary-500 to-primary-750">
             <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
               <FolderIcon />
             </div>
@@ -101,8 +101,8 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
           whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
           className="flex w-full rounded-2xl overflow-hidden bg-white border border-secondary-200 shadow-xl shadow-secondary-100/10 min-h-[140px]"
         >
-          {/* Left Panel */}
-          <div className={`w-2/5 p-5 flex flex-col justify-between text-white bg-gradient-to-br ${pending > 0 ? 'from-amber-500 to-amber-600' : 'from-primary-500 to-primary-700'}`}>
+          {/* Left Panel - Sober secondary slate */}
+          <div className="w-2/5 p-5 flex flex-col justify-between text-white bg-gradient-to-br from-secondary-700 to-secondary-850">
             <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
               <ClockIcon />
             </div>
@@ -120,7 +120,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
                   <p className="text-[10px] uppercase font-black text-secondary-400 tracking-wider mb-1">Por Contactar</p>
                   <h3 className="text-3xl font-black text-secondary-800 tracking-tight">{pending}</h3>
                 </div>
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${pending > 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary-50 text-primary-600'}`}>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary-50 text-primary-600">
                   {pending > 0 ? 'En cola' : 'Listo'}
                 </span>
               </div>
@@ -128,7 +128,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
             </div>
 
             <div className="w-full bg-secondary-100 rounded-full h-2 mt-4 overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-1000 ${pending > 0 ? 'bg-amber-500' : 'bg-primary-500'}`} style={{ width: `${pendingProgress}%` }}></div>
+              <div className="h-full rounded-full transition-all duration-1000 bg-primary-400" style={{ width: `${pendingProgress}%` }}></div>
             </div>
           </div>
         </motion.div>
@@ -138,8 +138,8 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
           whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
           className="flex w-full rounded-2xl overflow-hidden bg-white border border-secondary-200 shadow-xl shadow-secondary-100/10 min-h-[140px]"
         >
-          {/* Left Panel */}
-          <div className="w-2/5 p-5 flex flex-col justify-between text-white bg-gradient-to-br from-indigo-500 to-purple-600">
+          {/* Left Panel - Sober brand green */}
+          <div className="w-2/5 p-5 flex flex-col justify-between text-white bg-gradient-to-br from-primary-600 to-primary-800">
             <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
               <RocketIcon />
             </div>
@@ -157,7 +157,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
                   <p className="text-[10px] uppercase font-black text-secondary-400 tracking-wider mb-1">Impacto Hoy</p>
                   <h3 className="text-3xl font-black text-secondary-800 tracking-tight">{sentSession}</h3>
                 </div>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 animate-pulse">
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary-50 text-primary-600 animate-pulse">
                   Activo
                 </span>
               </div>
@@ -165,7 +165,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
             </div>
 
             <div className="w-full bg-secondary-100 rounded-full h-2 mt-4 overflow-hidden">
-              <div className="bg-indigo-500 h-full rounded-full transition-all duration-1000" style={{ width: `${sentSession > 0 ? 100 : 0}%` }}></div>
+              <div className="bg-primary-500 h-full rounded-full transition-all duration-1000" style={{ width: `${sentSession > 0 ? 100 : 0}%` }}></div>
             </div>
           </div>
         </motion.div>
