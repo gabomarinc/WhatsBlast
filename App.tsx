@@ -519,15 +519,14 @@ const App: React.FC = () => {
       </header>
 
       <Banner
-        id="leadshub-cta-banner"
         variant="rainbow"
         className="w-full text-center relative border-b border-secondary-100"
         height="3.5rem"
       >
-        <span className="flex items-center gap-2 justify-center text-xs md:text-sm font-bold text-secondary-800 pr-8">
+        <span className="flex items-center gap-2 justify-center text-xs md:text-sm font-bold text-secondary-800">
           🚀 <strong className="text-secondary-900 font-black">¿Listo para automatizar?</strong> Pasa al siguiente nivel integrando la API oficial de WhatsApp con <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-extrabold">LeadsHub</span>
           <button 
-            onClick={() => setActiveTab('automate')}
+            onClick={() => window.open('https://agentes.konsul.digital/register', '_blank')}
             className="ml-3 px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg text-[10px] md:text-xs font-black shadow-md shadow-indigo-200 transition-all active:scale-95"
           >
             Saber Más ➔
