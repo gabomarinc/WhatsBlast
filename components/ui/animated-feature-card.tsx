@@ -46,6 +46,9 @@ const AnimatedFeatureCard = React.forwardRef<
 >(({ className, index, tag, title, imageSrc, color, ...props }, ref) => {
   const cardStyle = colorVariants[color] as React.CSSProperties;
 
+  // Filter out any prospective event handler overrides that collide with motion.div types
+  const { onAnimationStart, onDragStart, onDragEnd, onDrag, ...safeProps } = props as any;
+
   return (
     <motion.div
       ref={ref}
@@ -61,7 +64,7 @@ const AnimatedFeatureCard = React.forwardRef<
         hover: { y: -10 },
       }}
       transition={{ type: "spring", stiffness: 200, damping: 15 }}
-      {...props}
+      {...safeProps}
     >
       {/* Background Gradient */}
       <div

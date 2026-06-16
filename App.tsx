@@ -119,27 +119,7 @@ const App: React.FC = () => {
       }
   };
 
-  // REGISTER HANDLER
-  const handleRegister = async (email: string, pass: string, name: string, company: string): Promise<boolean> => {
-      setState(prev => ({ ...prev, isLoading: true }));
-      try {
-           const result = await NeonService.registerUser(email, pass, name, company);
-           if (result.success && result.user) {
-               localStorage.setItem(SESSION_KEY, JSON.stringify(result.user));
-               setState(prev => ({ ...prev, currentUser: result.user!, isLoading: false }));
-               addNotification("¡Cuenta creada! Bienvenido a HumanFlow ✨", "success");
-               return true;
-           } else {
-               addNotification(result.error || "Error al registrarse", "error");
-               setState(prev => ({ ...prev, isLoading: false }));
-               return false;
-           }
-      } catch (error) {
-          addNotification("Error de conexión.", "error");
-          setState(prev => ({ ...prev, isLoading: false }));
-          return false;
-      }
-  };
+
 
   // GUEST START HANDLER
   const handleGuestStart = async (email: string): Promise<boolean> => {
