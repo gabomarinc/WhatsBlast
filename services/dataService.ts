@@ -101,14 +101,23 @@ export const DataService = {
     }).filter(p => p.telefono && p.telefono.length > 5); // Filter out rows without valid phone
   },
 
-  // Template is now stored in LocalStorage as we don't have a backend DB
-  getTemplate(): Template {
+  // Templates are stored in LocalStorage as an array
+  getTemplates(): Template[] {
     const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
-    return { content: saved || DEFAULT_TEMPLATE };
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            // Handle legacy single-string template
+            return [{ id: 'default', name: 'Plantilla Original', content: saved }];
+        }
+    }
+    return [{ id: 'default', name: 'Primer Contacto', content: DEFAULT_TEMPLATE }];
   },
 
-  saveTemplate(content: string): boolean {
-    localStorage.setItem(TEMPLATE_STORAGE_KEY, content);
+  saveTemplates(templates: Template[]): boolean {
+    localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
     return true;
   }
 };

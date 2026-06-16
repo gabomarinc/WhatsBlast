@@ -31,6 +31,8 @@ export interface UploadRecord {
 }
 
 export interface Template {
+  id: string;
+  name: string;
   content: string;
 }
 
@@ -54,6 +56,7 @@ export interface AppState {
   // User Identity
   currentUser: User | null;
   currentFilename?: string; // Track filename for DB
+  globalSentCount: number;
 }
 
 export interface Notification {

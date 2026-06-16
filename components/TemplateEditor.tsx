@@ -1,24 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { DEFAULT_VARIABLES } from '../constants';
-import { Prospect } from '../types';
+import { Prospect, Template } from '../types';
 
 interface TemplateEditorProps {
-  initialTemplate: string;
-  onSave: (template: string) => void;
+  templates: Template[];
+  onSave: (templates: Template[]) => void;
   variables?: string[];
   sampleProspect?: Prospect;
 }
 
 export const TemplateEditor: React.FC<TemplateEditorProps> = ({ 
-  initialTemplate, 
+  templates, 
   onSave,
   variables = DEFAULT_VARIABLES,
   sampleProspect
 }) => {
-  const [content, setContent] = useState(initialTemplate);
+  const [localTemplates, setLocalTemplates] = useState<Template[]>(templates);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [content, setContent] = useState(templates[0]?.content || '');
   const [isSaved, setIsSaved] = useState(true);
   const [preview, setPreview] = useState('');
+
+  useEffect(() => {
+    setLocalTemplates(templates);
+    if (!templates[activeIndex]) {
+        setActiveIndex(0);
+        setContent(templates[0]?.content || '');
+    }
+  }, [templates]);
 
   // Update preview whenever content or sample data changes
   useEffect(() => {
@@ -48,8 +58,40 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
   };
 
   const handleSave = () => {
-    onSave(content);
+    const updated = [...localTemplates];
+    updated[activeIndex] = { ...updated[activeIndex], content };
+    setLocalTemplates(updated);
+    onSave(updated);
     setIsSaved(true);
+  };
+
+  const handleAddTemplate = () => {
+    const newTemplate: Template = {
+        id: crypto.randomUUID(),
+        name: `Plantilla ${localTemplates.length + 1}`,
+        content: 'Hola {{nombre}}, '
+    };
+    const updated = [...localTemplates, newTemplate];
+    setLocalTemplates(updated);
+    setActiveIndex(updated.length - 1);
+    setContent(newTemplate.content);
+    onSave(updated);
+  };
+
+  const handleDeleteTemplate = () => {
+    if (localTemplates.length <= 1) return;
+    const updated = localTemplates.filter((_, i) => i !== activeIndex);
+    setLocalTemplates(updated);
+    setActiveIndex(0);
+    setContent(updated[0].content);
+    onSave(updated);
+  };
+
+  const handleRename = (newName: string) => {
+      const updated = [...localTemplates];
+      updated[activeIndex] = { ...updated[activeIndex], name: newName };
+      setLocalTemplates(updated);
+      onSave(updated);
   };
 
   return (
@@ -58,9 +100,42 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({
       {/* Main Editor Column */}
       <div className="lg:col-span-2 space-y-4">
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-secondary-100">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-black text-secondary-800 tracking-tight">Diseña tu mensaje</h2>
-            <span className={`text-xs px-2 py-1 rounded-full font-bold transition-colors ${isSaved ? 'text-primary-600 bg-primary-50' : 'text-orange-500 bg-orange-50'}`}>
+          
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+             <div className="flex-1 w-full">
+                <div className="flex items-center gap-2 mb-2">
+                    <select 
+                        value={activeIndex}
+                        onChange={(e) => {
+                            setActiveIndex(Number(e.target.value));
+                            setContent(localTemplates[Number(e.target.value)].content);
+                            setIsSaved(true);
+                        }}
+                        className="bg-secondary-50 border border-secondary-200 text-secondary-800 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2.5 font-bold outline-none"
+                    >
+                        {localTemplates.map((tpl, i) => (
+                            <option key={tpl.id} value={i}>{tpl.name}</option>
+                        ))}
+                    </select>
+                    <button onClick={handleAddTemplate} className="bg-primary-50 text-primary-600 px-3 py-2 rounded-lg text-sm font-bold hover:bg-primary-100 transition-colors">
+                        + Nueva
+                    </button>
+                    {localTemplates.length > 1 && (
+                        <button onClick={handleDeleteTemplate} className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors" title="Eliminar plantilla">
+                            🗑️
+                        </button>
+                    )}
+                </div>
+                <input 
+                    type="text" 
+                    value={localTemplates[activeIndex]?.name || ''}
+                    onChange={(e) => handleRename(e.target.value)}
+                    className="text-lg font-black text-secondary-800 tracking-tight bg-transparent border-none p-0 focus:ring-0 w-full outline-none"
+                    placeholder="Nombre de plantilla"
+                />
+             </div>
+             
+            <span className={`text-xs px-2 py-1 rounded-full font-bold transition-colors whitespace-nowrap ${isSaved ? 'text-primary-600 bg-primary-50' : 'text-orange-500 bg-orange-50'}`}>
               {isSaved ? 'Guardado' : 'Cambios sin guardar'}
             </span>
           </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { ConnectScreen } from './components/ConnectScreen';
 import { ConfigurationScreen } from './components/ConfigurationScreen';
 import { TemplateEditor } from './components/TemplateEditor';
@@ -6,6 +7,9 @@ import { ProspectCard } from './components/ProspectCard';
 import { DashboardStats } from './components/DashboardStats';
 import { FilterBar } from './components/FilterBar';
 import { ToastContainer } from './components/Toast';
+import { CampaignsDashboard } from './components/CampaignsDashboard';
+import { LeadsHubUpsell } from './components/LeadsHubUpsell';
+import { PaywallModal } from './components/PaywallModal';
 import { DataService } from './services/dataService';
 import { NeonService } from './services/neon';
 import { AppState, Notification, Prospect, Template, ColumnMapping, User } from './types';
@@ -23,21 +27,26 @@ const App: React.FC = () => {
     mapping: { nameColumn: '', phoneColumn: '', visibleColumns: [], filterableColumns: [] },
     activeFilters: {},
     currentUser: null,
-    currentFilename: ''
+    currentFilename: '',
+    globalSentCount: 0
   });
+
+  const [isPaywallOpen, setIsPaywallOpen] = useState(false);
 
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
-  const [template, setTemplate] = useState<Template>({ content: '' });
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [activeTab, setActiveTab] = useState<'list' | 'template'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'template' | 'campaigns' | 'automate'>('list');
   const [viewFilter, setViewFilter] = useState<'active' | 'sent'>('active');
 
   // Load resources and check session on mount
   useEffect(() => {
-    // 1. Load Template
-    const tpl = DataService.getTemplate();
-    setTemplate(tpl);
+    // 1. Load Templates
+    const tpls = DataService.getTemplates();
+    setTemplates(tpls);
+    if (tpls.length > 0) setSelectedTemplateId(tpls[0].id);
     
     // 2. Check DB Connection
     if (NeonService.isConnected()) {
@@ -132,6 +141,34 @@ const App: React.FC = () => {
       }
   };
 
+  // GUEST START HANDLER
+  const handleGuestStart = async (email: string): Promise<boolean> => {
+      setState(prev => ({ ...prev, isLoading: true }));
+      try {
+          const result = await NeonService.registerGuest(email);
+          if (result.success && result.user) {
+              const sentCount = await NeonService.getSentCount(email);
+              localStorage.setItem(SESSION_KEY, JSON.stringify(result.user));
+              setState(prev => ({ 
+                  ...prev, 
+                  currentUser: result.user!, 
+                  globalSentCount: sentCount,
+                  isLoading: false 
+              }));
+              addNotification("¡Modo de prueba activado! 🚀", "success");
+              return true;
+          } else {
+              addNotification(result.error || "Error al iniciar prueba", "error");
+              setState(prev => ({ ...prev, isLoading: false }));
+              return false;
+          }
+      } catch (error) {
+          addNotification("Error de conexión.", "error");
+          setState(prev => ({ ...prev, isLoading: false }));
+          return false;
+      }
+  };
+
   const handleResumeSession = async (uploadId: number) => {
       setState(prev => ({ ...prev, isLoading: true }));
       try {
@@ -144,6 +181,7 @@ const App: React.FC = () => {
               step: 'dashboard',
               mapping: mapping as ColumnMapping
           }));
+          setActiveTab('list');
           addNotification("Sesión recuperada con éxito ✨", "success");
       } catch (error) {
           console.error(error);
@@ -252,14 +290,23 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, step: 'dashboard', isLoading: false }));
   };
 
-  const handleSaveTemplate = async (content: string) => {
-    setTemplate({ content });
-    DataService.saveTemplate(content);
-    addNotification("Mensaje actualizado ✍️");
+  const handleSaveTemplates = (updated: Template[]) => {
+    setTemplates(updated);
+    DataService.saveTemplates(updated);
+    addNotification("Plantillas actualizadas ✍️");
   };
 
   const handleSendMessage = (prospect: Prospect) => {
-    let msg = template.content;
+    // Check Limits for Guests/Free Users
+    if (state.currentUser?.role === 'guest' || state.currentUser?.plan === 'free') {
+        if (state.globalSentCount >= 10) {
+            setIsPaywallOpen(true);
+            return;
+        }
+    }
+
+    const activeTemplate = templates.find(t => t.id === selectedTemplateId) || templates[0];
+    let msg = activeTemplate ? activeTemplate.content : '';
     
     msg = msg.replace(/{{(.*?)}}/g, (match, p1) => {
       const key = p1.trim();
@@ -275,6 +322,17 @@ const App: React.FC = () => {
     if (NeonService.isConnected()) {
         NeonService.updateProspectStatus(prospect.id, 'Contactado').catch(() => {});
     }
+
+    // Increment local counter and check emotional milestones
+    setState(prev => {
+        const newCount = prev.globalSentCount + 1;
+        if (prev.currentUser?.role === 'guest' || prev.currentUser?.plan === 'free') {
+            if (newCount === 5) {
+                setTimeout(() => addNotification("¡Excelente ritmo! Te quedan 5 envíos gratuitos.", "info"), 1000);
+            }
+        }
+        return { ...prev, globalSentCount: newCount };
+    });
 
     setProspects(prev => prev.map(p => {
         if (p.id === prospect.id) return { ...p, estado: 'Contactado' };
@@ -295,6 +353,20 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, activeFilters: {} }));
   };
 
+  const handleExportExcel = () => {
+    if (prospects.length === 0) return;
+    
+    // Prepare data (remove unnecessary fields if needed, but returning all is usually better)
+    const worksheet = XLSX.utils.json_to_sheet(prospects);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Prospectos");
+    
+    const filename = `Resultados_${state.currentFilename || 'export'}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+    
+    addNotification(`Exportado como ${filename}`, "success");
+  };
+
   // --- RENDERING ---
 
   if (state.step === 'connect') {
@@ -304,6 +376,7 @@ const App: React.FC = () => {
             onFileSelect={handleFileSelect}
             onLogin={handleLogin}
             onRegister={handleRegister}
+            onGuestStart={handleGuestStart}
             isLoading={state.isLoading} 
             currentUser={state.currentUser}
             onLogout={handleLogout}
@@ -339,7 +412,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-4 group cursor-default">
              <div className="relative">
                 <img 
-                  src={state.currentUser?.logo_url || "https://konsul.digital/wp-content/uploads/2025/07/Logo-original-e1751717849441.png"}
+                  src={state.currentUser?.logo_url || "https://konsul.digital/images/Konsul%20logo%20general.png"}
                   alt="Logo" 
                   className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-105"
                 />
@@ -383,10 +456,10 @@ const App: React.FC = () => {
         />
         
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 mt-12">
-            <div className="bg-secondary-50 p-1.5 rounded-2xl flex w-full md:w-auto shadow-inner border border-secondary-100">
+            <div className="bg-secondary-50 p-1.5 rounded-2xl flex w-full md:w-auto shadow-inner border border-secondary-100 overflow-x-auto max-w-full">
                 <button 
                   onClick={() => setActiveTab('list')}
-                  className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
+                  className={`whitespace-nowrap flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
                     activeTab === 'list' 
                       ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5' 
                       : 'text-secondary-500 hover:text-secondary-700'
@@ -396,15 +469,52 @@ const App: React.FC = () => {
                 </button>
                 <button 
                   onClick={() => setActiveTab('template')}
-                  className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
+                  className={`whitespace-nowrap flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
                     activeTab === 'template' 
                       ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5' 
                       : 'text-secondary-500 hover:text-secondary-700'
                   }`}
                 >
-                  <span>💬</span> Personalizar Mensaje
+                  <span>💬</span> Plantillas
+                </button>
+                <button 
+                  onClick={() => setActiveTab('campaigns')}
+                  className={`whitespace-nowrap flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
+                    activeTab === 'campaigns' 
+                      ? 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5' 
+                      : 'text-secondary-500 hover:text-secondary-700'
+                  }`}
+                >
+                  <span>📊</span> Mis Campañas
+                </button>
+                <button 
+                  onClick={() => setActiveTab('automate')}
+                  className={`whitespace-nowrap flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 ${
+                    activeTab === 'automate' 
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md ring-1 ring-indigo-500' 
+                      : 'text-indigo-500 bg-indigo-50 hover:bg-indigo-100 ring-1 ring-indigo-200'
+                  }`}
+                >
+                  <span>⚡</span> Automatizar (PRO)
                 </button>
             </div>
+            
+            {activeTab === 'list' && (
+                <div className="flex gap-4">
+                  <select 
+                    value={selectedTemplateId} 
+                    onChange={(e) => setSelectedTemplateId(e.target.value)}
+                    className="px-4 py-2 bg-white border border-secondary-200 text-secondary-800 text-sm rounded-xl focus:ring-primary-500 focus:border-primary-500 font-bold outline-none shadow-sm"
+                  >
+                    {templates.map(tpl => (
+                        <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                    ))}
+                  </select>
+                  <button onClick={handleExportExcel} className="px-6 py-2.5 bg-green-50 text-green-700 rounded-xl font-bold text-sm hover:bg-green-100 transition-colors flex items-center gap-2 border border-green-200">
+                      <span>⬇️</span> Exportar Excel
+                  </button>
+                </div>
+            )}
         </div>
 
         <div className="animate-fade-in min-h-[400px]">
@@ -487,15 +597,42 @@ const App: React.FC = () => {
           {activeTab === 'template' && (
             <div className="max-w-5xl mx-auto pt-4">
               <TemplateEditor 
-                initialTemplate={template.content} 
-                onSave={handleSaveTemplate}
+                templates={templates} 
+                onSave={handleSaveTemplates}
                 variables={variableKeys}
                 sampleProspect={prospects[0]} 
               />
             </div>
           )}
+
+          {activeTab === 'campaigns' && (
+            <div className="max-w-5xl mx-auto pt-4">
+              <CampaignsDashboard 
+                currentUser={state.currentUser}
+                onResumeSession={handleResumeSession}
+              />
+            </div>
+          )}
+
+          {activeTab === 'automate' && (
+            <div className="max-w-5xl mx-auto pt-4">
+              <LeadsHubUpsell />
+            </div>
+          )}
         </div>
       </main>
+
+      {state.currentUser && (
+          <PaywallModal 
+              isOpen={isPaywallOpen}
+              onClose={() => setIsPaywallOpen(false)}
+              currentUser={state.currentUser}
+              onUpgradeSuccess={(updatedUser) => {
+                  setState(prev => ({ ...prev, currentUser: updatedUser }));
+                  localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser));
+              }}
+          />
+      )}
 
       <ToastContainer notifications={notifications} removeNotification={removeNotification} />
     </div>

@@ -168,6 +168,118 @@ export const NeonService = {
   },
 
   /**
+   * Registers a guest user or logs them in if they are already a guest
+   */
+  async registerGuest(email: string): Promise<{ success: boolean; user?: User; error?: string }> {
+      const cleanEmail = email.toLowerCase().trim();
+      if (!sql) return { success: false, error: "Sin conexión a DB" };
+
+      try {
+          const existing = await sql`SELECT * FROM users WHERE email = ${cleanEmail}`;
+          if (existing.length > 0) {
+              const user = existing[0];
+              if (user.role === 'guest') {
+                  return {
+                      success: true,
+                      user: {
+                          id: user.email,
+                          email: user.email,
+                          name: user.name || cleanEmail.split('@')[0],
+                          company_name: user.company_name || 'Invitado',
+                          logo_url: user.logo_url,
+                          plan: user.plan,
+                          role: user.role
+                      }
+                  };
+              } else {
+                  return { success: false, error: "Esta cuenta ya está registrada, por favor inicia sesión." };
+              }
+          }
+
+          // Insert Guest
+          const result = await sql`
+              INSERT INTO users (email, password, name, company_name, plan, role)
+              VALUES (${cleanEmail}, 'GUEST_NO_PASSWORD', ${cleanEmail.split('@')[0]}, 'Invitado', 'free', 'guest')
+              RETURNING email, name, company_name, logo_url, plan, role
+          `;
+          
+          const user = result[0];
+          return {
+              success: true,
+              user: {
+                  id: user.email,
+                  email: user.email,
+                  name: user.name,
+                  company_name: user.company_name,
+                  logo_url: user.logo_url,
+                  plan: user.plan,
+                  role: user.role
+              }
+          };
+      } catch (err) {
+          console.error("Guest Registration Error:", err);
+          return { success: false, error: "Error al crear invitado." };
+      }
+  },
+
+  /**
+   * Get the total number of contacted prospects for a user
+   */
+  async getSentCount(email: string): Promise<number> {
+      if (!sql) return 0;
+      try {
+          const cleanEmail = email.toLowerCase().trim();
+          const result = await sql`
+              SELECT COUNT(*) as count 
+              FROM prospects p
+              JOIN upload_sessions u ON p.upload_id = u.id
+              WHERE u.user_email = ${cleanEmail} AND p.status = 'Contactado'
+          `;
+          return parseInt(result[0].count) || 0;
+      } catch (err) {
+          return 0;
+      }
+  },
+
+  /**
+   * Upgrades a guest user to pro
+   */
+  async upgradeGuestToPro(email: string, password: string, name: string, companyName: string): Promise<{ success: boolean; user?: User; error?: string }> {
+      const cleanEmail = email.toLowerCase().trim();
+      if (!sql) return { success: false, error: "Sin conexión a DB" };
+
+      try {
+          const salt = await bcrypt.genSalt(10);
+          const hash = await bcrypt.hash(password, salt);
+
+          const result = await sql`
+              UPDATE users 
+              SET password = ${hash}, name = ${name}, company_name = ${companyName}, plan = 'pro', role = 'user'
+              WHERE email = ${cleanEmail} AND role = 'guest'
+              RETURNING email, name, company_name, logo_url, plan, role
+          `;
+
+          if (result.length === 0) return { success: false, error: "Usuario no encontrado o ya registrado." };
+
+          const user = result[0];
+          return {
+              success: true,
+              user: {
+                  id: user.email,
+                  email: user.email,
+                  name: user.name,
+                  company_name: user.company_name,
+                  logo_url: user.logo_url,
+                  plan: user.plan,
+                  role: user.role
+              }
+          };
+      } catch (err) {
+          return { success: false, error: "Error al actualizar la cuenta." };
+      }
+  },
+
+  /**
    * Login Logic with Security Upgrade
    * Checks for Bcrypt hash. If plain text matches, upgrades to Bcrypt.
    */
