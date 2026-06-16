@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
+import { useState, useId, useRef, FormEvent } from 'react';
+import { motion } from 'framer-motion';
+import NumberFlow from '@number-flow/react';
+import { CheckCheck, Zap, Lock } from 'lucide-react';
 import { NeonService } from '../services/neon';
 import { User } from '../types';
 import { STRIPE_MONTHLY_LINK, STRIPE_ANNUAL_LINK } from '../constants';
+import { TimelineContent } from './ui/timeline-animation';
+import { VerticalCutReveal } from './ui/vertical-cut-reveal';
+import { cn } from '../lib/utils';
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -10,186 +16,344 @@ interface PaywallModalProps {
   onUpgradeSuccess: (user: User) => void;
 }
 
-export const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, currentUser, onUpgradeSuccess }) => {
-  const [step, setStep] = useState<'pitch' | 'upgrade' | 'success'>('pitch');
+const PricingSwitch = ({
+  button1,
+  button2,
+  onSwitch,
+  className,
+  layoutId,
+}: {
+  button1: string;
+  button2: string;
+  onSwitch: (value: string) => void;
+  className?: string;
+  layoutId?: string;
+}) => {
+  const [selected, setSelected] = useState("0");
+  const uniqueId = useId();
+  const switchLayoutId = layoutId || `switch-${uniqueId}`;
+
+  const handleSwitch = (value: string) => {
+    setSelected(value);
+    onSwitch(value);
+  };
+
+  return (
+    <div
+      className={cn(
+        "relative z-10 w-full flex rounded-full bg-secondary-50 border border-secondary-200 p-1",
+        className
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => handleSwitch("0")}
+        className={cn(
+          "relative z-10 w-full sm:h-12 h-10 rounded-full sm:px-6 px-3 sm:py-2 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none",
+          selected === "0"
+            ? "text-white animate-pulse"
+            : "text-secondary-500 hover:text-secondary-800"
+        )}
+      >
+        {selected === "0" && (
+          <motion.span
+            layoutId={switchLayoutId}
+            className="absolute top-0 left-0 h-10 sm:h-12 w-full rounded-full border-[3px] shadow-sm shadow-secondary-900 border-secondary-950 bg-gradient-to-t from-secondary-900 via-secondary-800 to-secondary-900"
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          />
+        )}
+        <span className="relative z-20">{button1}</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => handleSwitch("1")}
+        className={cn(
+          "relative z-10 w-full sm:h-12 h-10 flex-shrink-0 rounded-full sm:px-6 px-3 sm:py-2 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none",
+          selected === "1"
+            ? "text-white animate-pulse"
+            : "text-secondary-500 hover:text-secondary-800"
+        )}
+      >
+        {selected === "1" && (
+          <motion.span
+            layoutId={switchLayoutId}
+            className="absolute top-0 left-0 h-10 sm:h-12 w-full rounded-full border-[3px] shadow-sm shadow-secondary-900 border-secondary-950 bg-gradient-to-t from-secondary-900 via-secondary-800 to-secondary-900"
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          />
+        )}
+        <span className="relative z-20 flex justify-center items-center gap-2">
+          {button2}
+        </span>
+      </button>
+    </div>
+  );
+};
+
+export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallModalProps) => {
+  const [step, setStep] = useState<'pitch' | 'success'>('pitch');
   const [plan, setPlan] = useState<'monthly' | 'annual'>('monthly');
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pricingRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen) return null;
 
-  const handleUpgradeClick = async () => {
-      if (!name || !company || !password) {
-          setError("Por favor completa todos los campos.");
-          return;
-      }
-      if (password.length < 5) {
-          setError("La contraseña debe tener al menos 5 caracteres.");
-          return;
-      }
+  const handleUpgradeClick = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!name || !company || !password) {
+        setError("Por favor completa todos los campos.");
+        return;
+    }
+    if (password.length < 5) {
+        setError("La contraseña debe tener al menos 5 caracteres.");
+        return;
+    }
 
-      setError(null);
-      setIsLoading(true);
+    setError(null);
+    setIsLoading(true);
 
-      // Upgrade guest to pro
-      const res = await NeonService.upgradeGuestToPro(currentUser?.email || '', password, name, company);
-      
-      if (res.success && res.user) {
-          onUpgradeSuccess(res.user);
-          // Redirect to Stripe checkout
-          window.open(plan === 'monthly' ? STRIPE_MONTHLY_LINK : STRIPE_ANNUAL_LINK, '_blank');
-          setStep('success');
-      } else {
-          setError(res.error || "Hubo un error al procesar tu cuenta.");
-      }
-      setIsLoading(false);
+    const res = await NeonService.upgradeGuestToPro(currentUser?.email || '', password, name, company);
+    
+    if (res.success && res.user) {
+        onUpgradeSuccess(res.user);
+        window.open(plan === 'monthly' ? STRIPE_MONTHLY_LINK : STRIPE_ANNUAL_LINK, '_blank');
+        setStep('success');
+    } else {
+        setError(res.error || "Hubo un error al procesar tu cuenta.");
+    }
+    setIsLoading(false);
   };
 
+  const revealVariants = {
+    visible: (i: number) => ({
+      y: 0,
+      opacity: 1,
+      filter: "blur(0px)",
+      transition: {
+        delay: i * 0.2,
+        duration: 0.5,
+      },
+    }),
+    hidden: {
+      filter: "blur(10px)",
+      y: -20,
+      opacity: 0,
+    },
+  };
+
+  const timelineVariants = {
+    visible: (i: number) => ({
+      y: 0,
+      opacity: 1,
+      filter: "blur(0px)",
+      transition: {
+        delay: i * 0.1,
+        duration: 0.4,
+      },
+    }),
+    hidden: {
+      filter: "blur(10px)",
+      y: -15,
+      opacity: 0,
+    },
+  };
+
+  const currentPrice = plan === 'monthly' ? 5 : 50;
+  const originalPrice = plan === 'monthly' ? 10 : 100;
+
+  const features = [
+    "Contactos y envíos ilimitados",
+    "Plantillas personalizables ilimitadas",
+    "Atajos de teclado y Modo Ráfaga ⚡",
+    "Exportación Excel de reportes instantánea",
+    "Soporte Premium prioritario",
+    "Consistencia de datos y offline local",
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-secondary-900/80 backdrop-blur-md animate-fade-in select-none">
-        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-secondary-100">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-white min-h-screen font-sans text-secondary-800 flex flex-col justify-between" ref={pricingRef}>
+      {/* Background radial gradient corresponding to brand primary color */}
+      <div
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(120% 120% at 50% 100%, #fff 40%, #e9fbf8 100%)",
+        }}
+      />
+
+      <div className="max-w-6xl mx-auto px-6 py-16 relative z-10 w-full flex-grow flex flex-col justify-center">
+        {step === 'pitch' ? (
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
             
-            {/* Header / Graphic */}
-            <div className="bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-center relative overflow-hidden">
-                <div className="relative z-10">
-                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 backdrop-blur-md border border-white/30 shadow-xl shadow-primary-950/20">
-                        🚀
+            {/* Left Panel - Features */}
+            <div className="md:col-span-7 space-y-6">
+              <TimelineContent
+                as="div"
+                animationNum={0}
+                timelineRef={pricingRef}
+                customVariants={revealVariants}
+                className="flex items-center gap-2 text-primary-600 font-bold"
+              >
+                <Zap className="h-5 w-5 text-primary-500 fill-primary-500" />
+                <span className="text-xs uppercase tracking-widest font-black">Límite alcanzado</span>
+              </TimelineContent>
+
+              <h1 className="text-4xl md:text-5xl font-black text-secondary-900 leading-tight tracking-tight">
+                <VerticalCutReveal
+                  splitBy="words"
+                  staggerDuration={0.1}
+                  staggerFrom="first"
+                  reverse={true}
+                  transition={{
+                    type: "spring",
+                    stiffness: 250,
+                    damping: 40,
+                    delay: 0.2,
+                  }}
+                >
+                  Reactiva tus ventas hoy mismo
+                </VerticalCutReveal>
+              </h1>
+
+              <TimelineContent
+                as="p"
+                animationNum={1}
+                timelineRef={pricingRef}
+                customVariants={revealVariants}
+                className="text-lg text-secondary-500 font-medium"
+              >
+                Has visto lo rápido que es prospectar con WhatsBlast. Consigue la licencia PRO y continúa enviando sin límites.
+              </TimelineContent>
+
+              <div className="space-y-4 pt-4">
+                {features.map((feature, index) => (
+                  <TimelineContent
+                    key={index}
+                    as="div"
+                    animationNum={2 + index}
+                    timelineRef={pricingRef}
+                    customVariants={timelineVariants}
+                    className="flex items-center"
+                  >
+                    <div className="w-6 h-6 bg-primary-500 shadow-md shadow-primary-500/20 rounded-full flex items-center justify-center mr-3 shrink-0">
+                      <CheckCheck className="h-3.5 w-3.5 text-white" />
                     </div>
-                    <h2 className="text-2xl font-black text-white mb-2">¡Límite Alcanzado!</h2>
-                    <p className="text-primary-100 text-sm font-medium">Has enviado los 10 mensajes de prueba gratuitos.</p>
+                    <span className="text-secondary-700 font-bold text-sm">{feature}</span>
+                  </TimelineContent>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Panel - Plan Switcher & Register Form */}
+            <div className="md:col-span-5 bg-white/60 backdrop-blur-md p-8 rounded-3xl border border-secondary-200/60 shadow-xl space-y-6">
+              <div>
+                <h3 className="font-black text-secondary-800 text-lg mb-4">Selecciona tu Plan</h3>
+                <PricingSwitch
+                  button1="Mensual"
+                  button2="Anual (Ahorra 17%)"
+                  onSwitch={(val) => setPlan(val === "0" ? "monthly" : "annual")}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Secure account details */}
+              <form onSubmit={handleUpgradeClick} className="space-y-4">
+                <div className="border-t border-secondary-100 pt-4 space-y-4">
+                  <h4 className="font-black text-xs uppercase tracking-widest text-secondary-400">Datos de tu Cuenta</h4>
+                  <div>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Nombre Completo</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={name} 
+                      onChange={e => setName(e.target.value)}
+                      className="w-full px-4 py-3 bg-secondary-50/50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
+                      placeholder="Ej. Juan Pérez"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Empresa</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={company} 
+                      onChange={e => setCompany(e.target.value)}
+                      className="w-full px-4 py-3 bg-secondary-50/50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
+                      placeholder="Mi Negocio"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Contraseña</label>
+                    <input 
+                      type="password" 
+                      required
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 bg-secondary-50/50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
+                      placeholder="••••••"
+                    />
+                  </div>
                 </div>
+
+                {error && <p className="text-xs font-black text-red-500">{error}</p>}
+
+                {/* Price and CTA */}
+                <div className="flex items-center justify-between border-t border-secondary-100 pt-6">
+                  <div className="flex items-baseline gap-1 text-secondary-800">
+                    <span className="text-3xl font-black">$</span>
+                    <NumberFlow
+                      value={currentPrice}
+                      className="text-4xl font-black"
+                    />
+                    <span className="text-xs text-secondary-500 font-bold">/{plan === 'monthly' ? 'mes' : 'año'}</span>
+                    <span className="text-sm text-secondary-400 line-through ml-2 font-medium">
+                      ${originalPrice}
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="text-white text-xs font-black uppercase tracking-wider h-12 px-6 rounded-full border-[3px] shadow-sm shadow-primary-600 border-primary-600 bg-gradient-to-t from-primary-600 via-primary-500 to-primary-600 hover:from-primary-700 hover:to-primary-600 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isLoading ? 'Procesando...' : 'Pagar 💳'}
+                  </button>
+                </div>
+              </form>
             </div>
-
-            {/* Content */}
-            <div className="p-8">
-                {step === 'pitch' && (
-                    <div className="animate-slide-up">
-                        <p className="text-secondary-600 mb-6 text-center text-sm font-medium leading-relaxed">
-                            Únete a cientos de negocios que reactivan sus bases de datos a través de WhatsApp de forma rápida y medible.
-                        </p>
-                        
-                        {/* Selector de Planes */}
-                        <div className="space-y-4 mb-8">
-                            {/* Option 1: Monthly */}
-                            <div 
-                              onClick={() => setPlan('monthly')}
-                              className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-                                plan === 'monthly' 
-                                  ? 'border-primary-500 bg-primary-50/20 shadow-md' 
-                                  : 'border-secondary-150 bg-white hover:border-secondary-300'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${plan === 'monthly' ? 'border-primary-500' : 'border-secondary-300'}`}>
-                                  {plan === 'monthly' && <div className="w-2.5 h-2.5 bg-primary-500 rounded-full"></div>}
-                                </div>
-                                <div className="text-left">
-                                  <p className="font-black text-secondary-800 text-sm">Plan Mensual</p>
-                                  <p className="text-xs text-secondary-400 font-bold">Acceso Ilimitado</p>
-                                </div>
-                              </div>
-                              <span className="font-black text-lg text-secondary-800">$5<span className="text-xs text-secondary-400 font-bold">/mes</span></span>
-                            </div>
-
-                            {/* Option 2: Annual */}
-                            <div 
-                              onClick={() => setPlan('annual')}
-                              className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between relative ${
-                                plan === 'annual' 
-                                  ? 'border-primary-500 bg-primary-50/20 shadow-md' 
-                                  : 'border-secondary-150 bg-white hover:border-secondary-300'
-                              }`}
-                            >
-                              <span className="absolute -top-2.5 right-6 bg-primary-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm tracking-wider">
-                                Ahorra 17%
-                              </span>
-                              <div className="flex items-center gap-3">
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${plan === 'annual' ? 'border-primary-500' : 'border-secondary-300'}`}>
-                                  {plan === 'annual' && <div className="w-2.5 h-2.5 bg-primary-500 rounded-full"></div>}
-                                </div>
-                                <div className="text-left">
-                                  <p className="font-black text-secondary-800 text-sm">Plan Anual</p>
-                                  <p className="text-xs text-secondary-400 font-bold">Un año de ventas</p>
-                                </div>
-                              </div>
-                              <span className="font-black text-lg text-secondary-800">$50<span className="text-xs text-secondary-400 font-bold">/año</span></span>
-                            </div>
-                        </div>
-
-                        <button 
-                            onClick={() => setStep('upgrade')}
-                            className="w-full py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-black shadow-lg shadow-primary-500/30 hover:scale-[1.02] transition-transform flex justify-center items-center gap-2 select-none"
-                        >
-                            Comenzar Ahora 🔓
-                        </button>
-                    </div>
-                )}
-
-                {step === 'upgrade' && (
-                    <div className="animate-slide-up">
-                        <h3 className="font-black text-base text-secondary-800 mb-1">Completa tu cuenta</h3>
-                        <p className="text-xs text-secondary-500 mb-6">Completa tus datos para registrar tu cuenta PRO e ir a la pasarela de pago.</p>
-                        
-                        <div className="space-y-4 mb-6">
-                            <div>
-                                <label className="text-[9px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Tu Nombre</label>
-                                <input 
-                                    type="text" value={name} onChange={e => setName(e.target.value)}
-                                    className="w-full px-4 py-3 bg-secondary-50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
-                                    placeholder="Ej. Juan Pérez"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[9px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Empresa</label>
-                                <input 
-                                    type="text" value={company} onChange={e => setCompany(e.target.value)}
-                                    className="w-full px-4 py-3 bg-secondary-50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
-                                    placeholder="Mi Negocio"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[9px] uppercase font-black tracking-widest text-secondary-400 ml-1 mb-1 block">Crea una Contraseña</label>
-                                <input 
-                                    type="password" value={password} onChange={e => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3 bg-secondary-50 border border-secondary-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-primary-200"
-                                    placeholder="••••••"
-                                />
-                            </div>
-                        </div>
-
-                        {error && <p className="text-xs font-bold text-red-500 mb-4">{error}</p>}
-
-                        <button 
-                            onClick={handleUpgradeClick}
-                            disabled={isLoading}
-                            className={`w-full py-4 text-white rounded-xl font-black shadow-lg hover:scale-[1.02] transition-transform flex justify-center items-center gap-2 ${isLoading ? 'bg-secondary-300' : 'bg-primary-500 shadow-primary-500/30'}`}
-                        >
-                            {isLoading ? 'Procesando...' : `Pagar $${plan === 'monthly' ? '5' : '50'} con Stripe 💳`}
-                        </button>
-                    </div>
-                )}
-
-                {step === 'success' && (
-                    <div className="text-center animate-slide-up py-4">
-                        <div className="w-16 h-16 bg-primary-50 text-primary-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border-4 border-white shadow-xl">
-                            🎉
-                        </div>
-                        <h3 className="font-black text-xl text-secondary-800 mb-2">¡Bienvenido a PRO!</h3>
-                        <p className="text-sm text-secondary-500 mb-6">Tu cuenta ha sido actualizada exitosamente. Ya puedes seguir prospectando sin límites.</p>
-                        
-                        <button 
-                            onClick={() => window.location.reload()}
-                            className="w-full py-4 bg-secondary-900 text-white rounded-xl font-black shadow-lg hover:bg-black transition-colors"
-                        >
-                            Continuar
-                        </button>
-                    </div>
-                )}
+            
+          </div>
+        ) : (
+          <div className="max-w-md mx-auto text-center py-12 animate-fade-in bg-white p-8 rounded-3xl border border-secondary-200 shadow-2xl relative z-10">
+            <div className="w-20 h-20 bg-primary-50 text-primary-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 border-4 border-white shadow-xl">
+              🎉
             </div>
-        </div>
+            <h3 className="font-black text-2xl text-secondary-800 mb-2">¡Bienvenido a PRO!</h3>
+            <p className="text-sm text-secondary-500 mb-8 leading-relaxed">
+              Tu cuenta ha sido registrada y actualizada con éxito. La pasarela de pago se ha abierto en una nueva pestaña para asegurar tu licencia.
+            </p>
+            
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-secondary-900 text-white rounded-xl font-black shadow-lg hover:bg-black transition-colors"
+            >
+              Comenzar a Prospectar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Footer Branding */}
+      <div className="py-8 text-center text-xs text-secondary-400 font-bold border-t border-secondary-100 relative z-10">
+        <span className="flex items-center justify-center gap-1.5">
+          <Lock className="w-3.5 h-3.5 text-secondary-400" />
+          Pago 100% seguro a través de Stripe Checkout.
+        </span>
+      </div>
     </div>
   );
 };

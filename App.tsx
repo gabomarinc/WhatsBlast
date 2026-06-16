@@ -84,7 +84,21 @@ const App: React.FC = () => {
     if (savedSession) {
       try {
         const user: User = JSON.parse(savedSession);
-        setState(prev => ({ ...prev, currentUser: user }));
+        let initialCount = 0;
+        const saved = localStorage.getItem(`hf_sent_ids_${user.email || 'guest'}`);
+        if (saved) {
+          const ids = JSON.parse(saved);
+          if (Array.isArray(ids)) {
+            initialCount = ids.length;
+          }
+        }
+        setState(prev => ({ ...prev, currentUser: user, globalSentCount: initialCount }));
+        
+        if (NeonService.isConnected() && user.email) {
+          NeonService.getSentCount(user.email).then(count => {
+            setState(prev => ({ ...prev, globalSentCount: Math.max(count, initialCount) }));
+          }).catch(console.error);
+        }
       } catch (e) {
         localStorage.removeItem(SESSION_KEY);
       }
@@ -388,8 +402,8 @@ const App: React.FC = () => {
 
   const handleSendMessage = (prospect: Prospect) => {
     // Check Limits for Guests/Free Users
-    if (state.currentUser?.role === 'guest' || state.currentUser?.plan === 'free') {
-        if (state.globalSentCount >= 10) {
+    if (state.currentUser?.plan !== 'pro') {
+        if (state.globalSentCount >= 10 || sentIds.size >= 10) {
             setIsPaywallOpen(true);
             return;
         }
@@ -416,7 +430,7 @@ const App: React.FC = () => {
     // Increment local counter and check emotional milestones
     setState(prev => {
         const newCount = prev.globalSentCount + 1;
-        if (prev.currentUser?.role === 'guest' || prev.currentUser?.plan === 'free') {
+        if (prev.currentUser?.plan !== 'pro') {
             if (newCount === 5) {
                 setTimeout(() => addNotification("¡Excelente ritmo! Te quedan 5 envíos gratuitos.", "info"), 1000);
             }
@@ -472,6 +486,32 @@ const App: React.FC = () => {
   };
 
   // --- RENDERING ---
+
+  const contactedCount = displayProspects.filter(p => {
+      const est = (p.estado || '').toLowerCase();
+      const dbContacted = est.includes('contactado') || est.includes('éxito') || est.includes('cliente') || est.includes('ganado');
+      const localContacted = sentIds.has(p.id);
+      return dbContacted || localContacted;
+  }).length;
+
+  const isLimitReached = (state.currentUser?.plan !== 'pro') && (state.globalSentCount >= 10 || sentIds.size >= 10 || contactedCount >= 10);
+
+  if (state.currentUser && isLimitReached) {
+    return (
+      <>
+        <PaywallModal 
+            isOpen={true}
+            onClose={() => setIsPaywallOpen(false)}
+            currentUser={state.currentUser}
+            onUpgradeSuccess={(updatedUser) => {
+                setState(prev => ({ ...prev, currentUser: updatedUser }));
+                localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser));
+            }}
+        />
+        <ToastContainer notifications={notifications} removeNotification={removeNotification} />
+      </>
+    );
+  }
 
   if (state.step === 'connect') {
     return (
@@ -752,7 +792,7 @@ const App: React.FC = () => {
 
       {state.currentUser && (
           <PaywallModal 
-              isOpen={isPaywallOpen}
+              isOpen={isPaywallOpen || isLimitReached}
               onClose={() => setIsPaywallOpen(false)}
               currentUser={state.currentUser}
               onUpgradeSuccess={(updatedUser) => {
