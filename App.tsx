@@ -243,6 +243,18 @@ const App: React.FC = () => {
   const [selectedProspectId, setSelectedProspectId] = useState<string | null>(null);
   const [isBurstMode, setIsBurstMode] = useState<boolean>(true);
 
+  // Detect mobile screen to disable burst mode
+  useEffect(() => {
+    const checkMobile = () => {
+      if (window.innerWidth < 768) {
+        setIsBurstMode(false);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Auto-select the first prospect in the displayed list if none or invalid is selected
   useEffect(() => {
     if (displayProspects.length > 0) {
@@ -608,7 +620,7 @@ const App: React.FC = () => {
                  </div>
                   
                   <div className="flex items-center gap-4">
-                     <label className="flex items-center gap-2 cursor-pointer select-none">
+                     <label className="hidden md:flex items-center gap-2 cursor-pointer select-none">
                        <span className="text-xs font-black text-secondary-500 uppercase tracking-wider">⚡ Modo Ráfaga</span>
                        <div className="relative text-left">
                          <input 
@@ -716,7 +728,7 @@ const App: React.FC = () => {
 
       {/* Floating keyboard hint bar */}
       {state.step === 'dashboard' && activeTab === 'list' && displayProspects.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-secondary-900/90 backdrop-blur-md text-white py-3 px-6 rounded-full shadow-2xl border border-secondary-800 flex items-center gap-4 text-xs font-medium z-40 transition-all duration-300">
+        <div className="hidden md:flex fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-secondary-900/90 backdrop-blur-md text-white py-3 px-6 rounded-full shadow-2xl border border-secondary-800 items-center gap-4 text-xs font-medium z-40 transition-all duration-300">
           <span className="flex items-center gap-1.5 text-primary-400">
             <span className="bg-primary-500/20 text-primary-300 border border-primary-500/30 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">Enter</span>
             <span>Enviar</span>

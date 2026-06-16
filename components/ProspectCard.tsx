@@ -95,14 +95,14 @@ export const ProspectCard: React.FC<ProspectCardProps> = ({
 
       <div className="mt-6 pt-4 border-t border-secondary-50">
         <Button 
-          variant={isDone ? "ghost" : "outline"} 
+          variant={isDone ? "ghost" : isSelected ? "primary" : "outline"} 
           onClick={() => onSend(prospect)} 
           className={`w-full !py-2.5 !text-xs !font-bold transition-all ${
             isSelected 
-              ? 'bg-primary-500 text-white border-transparent shadow-lg shadow-primary-200' 
+              ? 'shadow-lg shadow-primary-200' 
               : isDone 
                 ? 'bg-secondary-50 text-secondary-400 hover:bg-secondary-100 cursor-default' 
-                : 'group-hover:bg-primary-500 group-hover:text-white group-hover:border-transparent group-hover:shadow-lg group-hover:shadow-primary-200'
+                : 'group-hover:!bg-primary-600 group-hover:!text-white group-hover:!border-transparent group-hover:shadow-lg group-hover:shadow-primary-200'
           }`}
         >
           <span className="flex items-center gap-2 justify-center w-full">
