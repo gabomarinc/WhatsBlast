@@ -38,7 +38,27 @@ const App: React.FC = () => {
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
 
   const [prospects, setProspects] = useState<Prospect[]>([]);
-  const [sentIds, setSentIds] = useState<Set<string>>(new Set());
+  const [sentIds, setSentIds] = useState<Set<string>>(() => {
+    try {
+      const savedSession = localStorage.getItem(SESSION_KEY);
+      const email = savedSession ? JSON.parse(savedSession)?.email : 'guest';
+      const saved = localStorage.getItem(`hf_sent_ids_${email || 'guest'}`);
+      if (saved) {
+        const ids = JSON.parse(saved);
+        if (Array.isArray(ids)) return new Set(ids);
+      }
+    } catch (e) {
+      console.error("Error loading sent IDs from localStorage", e);
+    }
+    return new Set();
+  });
+
+  // Persist sentIds to localStorage
+  useEffect(() => {
+    const email = state.currentUser?.email || 'guest';
+    localStorage.setItem(`hf_sent_ids_${email}`, JSON.stringify(Array.from(sentIds)));
+  }, [sentIds, state.currentUser?.email]);
+
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -82,12 +102,14 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(`hf_sent_ids_${state.currentUser?.email || 'guest'}`);
     setState(prev => ({
       ...prev,
       currentUser: null,
       step: 'connect',
       workbook: null
     }));
+    setSentIds(new Set());
     addNotification("Sesión cerrada correctamente", "info");
   };
 
@@ -191,6 +213,8 @@ const App: React.FC = () => {
     setTimeout(async () => {
       const result = await DataService.processFile(file);
       if (result.success && result.data) {
+        setSentIds(new Set());
+        localStorage.removeItem(`hf_sent_ids_${state.currentUser?.email || 'guest'}`);
         setState(prev => ({ 
           ...prev, 
           step: 'configure',
