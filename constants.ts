@@ -35,3 +35,7 @@ export const MOCK_PROSPECTS = [
 ];
 
 export const DEFAULT_TEMPLATE = "Hola {{nombre}}, vi que en {{empresa}} están buscando innovar. ¿Podemos charlar?";
+
+// Stripe Payment links
+export const STRIPE_MONTHLY_LINK = "https://buy.stripe.com/mock_monthly_checkout_link";
+export const STRIPE_ANNUAL_LINK = "https://buy.stripe.com/mock_annual_checkout_link";
