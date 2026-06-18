@@ -242,7 +242,7 @@ export const NeonService = {
   },
 
   /**
-   * Upgrades a guest user to pro
+   * Upgrades a guest user to pro (legacy direct logic)
    */
   async upgradeGuestToPro(email: string, password: string, name: string, companyName: string): Promise<{ success: boolean; user?: User; error?: string }> {
       const cleanEmail = email.toLowerCase().trim();
@@ -276,6 +276,74 @@ export const NeonService = {
           };
       } catch (err) {
           return { success: false, error: "Error al actualizar la cuenta." };
+      }
+  },
+
+  /**
+   * Saves guest credentials but keeps role='guest' and plan='free' until payment completes.
+   */
+  async saveGuestCredentialsAwaitingPayment(email: string, password: string, name: string, companyName: string): Promise<{ success: boolean; user?: User; error?: string }> {
+      const cleanEmail = email.toLowerCase().trim();
+      if (!sql) return { success: false, error: "Sin conexión a DB" };
+
+      try {
+          const salt = await bcrypt.genSalt(10);
+          const hash = await bcrypt.hash(password, salt);
+
+          const result = await sql`
+              UPDATE users 
+              SET password = ${hash}, name = ${name}, company_name = ${companyName}
+              WHERE email = ${cleanEmail} AND role = 'guest'
+              RETURNING email, name, company_name, logo_url, plan, role
+          `;
+
+          if (result.length === 0) return { success: false, error: "Usuario no encontrado o ya registrado." };
+
+          const user = result[0];
+          return {
+              success: true,
+              user: {
+                  id: user.email,
+                  email: user.email,
+                  name: user.name,
+                  company_name: user.company_name,
+                  logo_url: user.logo_url,
+                  plan: user.plan,
+                  role: user.role
+              }
+          };
+      } catch (err) {
+          return { success: false, error: "Error al actualizar credenciales." };
+      }
+  },
+
+  /**
+   * Fetch current user status to verify if they have been upgraded to PRO
+   */
+  async getUserProfile(email: string): Promise<User | null> {
+      const cleanEmail = email.toLowerCase().trim();
+      if (!sql) return null;
+
+      try {
+          const result = await sql`
+              SELECT email, name, company_name, logo_url, plan, role
+              FROM users 
+              WHERE LOWER(email) = ${cleanEmail}
+          `;
+
+          if (result.length === 0) return null;
+          const user = result[0];
+          return {
+              id: user.email,
+              email: user.email,
+              name: user.name,
+              company_name: user.company_name,
+              logo_url: user.logo_url,
+              plan: user.plan,
+              role: user.role
+          };
+      } catch (err) {
+          return null;
       }
   },
 

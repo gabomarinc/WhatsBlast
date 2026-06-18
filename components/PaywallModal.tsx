@@ -98,7 +98,9 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen) return null;
@@ -121,16 +123,41 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
     setError(null);
     setIsLoading(true);
 
-    const res = await NeonService.upgradeGuestToPro(currentUser?.email || '', password, name, company);
+    const userEmail = currentUser?.email || '';
+    const res = await NeonService.saveGuestCredentialsAwaitingPayment(userEmail, password, name, company);
     
     if (res.success && res.user) {
-        onUpgradeSuccess(res.user);
-        window.open(plan === 'monthly' ? STRIPE_MONTHLY_LINK : STRIPE_ANNUAL_LINK, '_blank');
+        const stripeBaseLink = plan === 'monthly' ? STRIPE_MONTHLY_LINK : STRIPE_ANNUAL_LINK;
+        // Prefill email and set client_reference_id to user's email for secure webhook mapping
+        const checkoutUrl = `${stripeBaseLink}?client_reference_id=${encodeURIComponent(userEmail)}&prefilled_email=${encodeURIComponent(userEmail)}`;
+        
+        window.open(checkoutUrl, '_blank');
         setStep('success');
     } else {
         setError(res.error || "Hubo un error al procesar tu cuenta.");
     }
     setIsLoading(false);
+  };
+
+  const handleVerifyPayment = async () => {
+    const userEmail = currentUser?.email || '';
+    if (!userEmail) return;
+
+    setVerificationError(null);
+    setIsVerifying(true);
+
+    // Give it a brief delay to simulate verification and fetch profile from Neon
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const updatedUser = await NeonService.getUserProfile(userEmail);
+
+    if (updatedUser && (updatedUser.plan === 'pro' || updatedUser.role === 'user')) {
+      onUpgradeSuccess(updatedUser);
+      window.location.reload();
+    } else {
+      setVerificationError("Aún no hemos detectado tu pago de Stripe. Si ya lo realizaste, espera unos segundos y presiona Verificar de nuevo.");
+    }
+    setIsVerifying(false);
   };
 
   const revealVariants = {
@@ -377,21 +404,41 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
             
           </div>
         ) : (
-          <div className="max-w-md mx-auto text-center py-12 animate-fade-in bg-white p-8 rounded-3xl border border-secondary-200 shadow-2xl relative z-10">
-            <div className="w-20 h-20 bg-primary-50 text-primary-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 border-4 border-white shadow-xl">
-              🎉
+          <div className="max-w-md mx-auto text-center py-12 animate-fade-in bg-white p-8 rounded-3xl border border-secondary-200 shadow-2xl relative z-10 space-y-4">
+            <div className="w-20 h-20 bg-primary-50 text-primary-500 rounded-full flex items-center justify-center text-4xl mx-auto border-4 border-white shadow-xl">
+              💳
             </div>
-            <h3 className="font-black text-2xl text-secondary-800 mb-2">¡Bienvenido a PRO!</h3>
-            <p className="text-sm text-secondary-500 mb-8 leading-relaxed">
-              Tu cuenta ha sido registrada y actualizada con éxito. La pasarela de pago se ha abierto en una nueva pestaña para asegurar tu licencia.
+            <h3 className="font-black text-2xl text-secondary-800">Pasarela de Stripe Abierta</h3>
+            <p className="text-sm text-secondary-500 leading-relaxed">
+              Hemos guardado tus credenciales. Por favor completa tu pago en la pestaña de Stripe que se acaba de abrir. Una vez finalizado, verifica tu activación aquí abajo.
             </p>
             
-            <button 
-              onClick={() => window.location.reload()}
-              className="w-full py-4 bg-secondary-900 text-white rounded-xl font-black shadow-lg hover:bg-black transition-colors"
-            >
-              Comenzar a Prospectar
-            </button>
+            {verificationError && (
+              <p className="text-xs font-bold text-red-500 bg-red-50 p-3 rounded-xl border border-red-100">
+                {verificationError}
+              </p>
+            )}
+
+            <div className="pt-2 space-y-2">
+              <button 
+                onClick={handleVerifyPayment}
+                disabled={isVerifying}
+                className="w-full py-4 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-black shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isVerifying ? 'Verificando con Stripe...' : 'Verificar Activación 🔄'}
+              </button>
+
+              <button 
+                onClick={() => {
+                  const stripeBaseLink = plan === 'monthly' ? STRIPE_MONTHLY_LINK : STRIPE_ANNUAL_LINK;
+                  const userEmail = currentUser?.email || '';
+                  window.open(`${stripeBaseLink}?client_reference_id=${encodeURIComponent(userEmail)}&prefilled_email=${encodeURIComponent(userEmail)}`, '_blank');
+                }}
+                className="w-full py-2 bg-secondary-50 text-secondary-500 rounded-xl font-bold text-xs hover:bg-secondary-100 transition-colors"
+              >
+                Volver a abrir ventana de pago ↗
+              </button>
+            </div>
           </div>
         )}
       </div>
