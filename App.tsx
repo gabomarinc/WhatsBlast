@@ -729,20 +729,41 @@ const App: React.FC = () => {
               {displayProspects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-secondary-200">
                   <div className="w-16 h-16 bg-secondary-50 rounded-full flex items-center justify-center text-3xl mb-4 text-secondary-300">
-                     {viewFilter === 'active' ? '🎉' : '📭'}
+                     {prospects.length === 0 ? '📁' : (viewFilter === 'active' ? '🎉' : '📭')}
                   </div>
                   <p className="font-black text-xl text-secondary-600">
-                      {viewFilter === 'active' ? '¡Todo limpio!' : 'Nada por aquí aún'}
+                      {prospects.length === 0 
+                        ? 'No hay base de datos activa' 
+                        : (viewFilter === 'active' ? '¡Todo limpio!' : 'Nada por aquí aún')}
                   </p>
                   <p className="text-sm text-secondary-400 mt-2 font-medium max-w-xs text-center">
-                      {viewFilter === 'active' 
-                        ? 'Has gestionado todos los prospectos pendientes bajo estos filtros.' 
-                        : 'Tu historial de mensajes enviados aparecerá aquí.'}
+                      {prospects.length === 0 
+                        ? 'Para comenzar a prospectar, sube un archivo Excel o retoma una campaña anterior.' 
+                        : (viewFilter === 'active' 
+                          ? 'Has gestionado todos los prospectos pendientes bajo estos filtros.' 
+                          : 'Tu historial de mensajes enviados aparecerá aquí.')}
                   </p>
-                  {Object.keys(state.activeFilters).length > 0 && (
-                     <button onClick={handleClearFilters} className="mt-6 text-primary-600 text-sm font-bold hover:underline">
-                         Limpiar filtros activos
-                     </button>
+                  {prospects.length === 0 ? (
+                    <div className="flex gap-3 mt-6">
+                      <button 
+                        onClick={() => setState(prev => ({ ...prev, step: 'connect' }))}
+                        className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-bold text-xs shadow-md shadow-primary-500/10 transition-colors"
+                      >
+                        Subir Archivo 📁
+                      </button>
+                      <button 
+                        onClick={() => setActiveTab('campaigns')}
+                        className="px-4 py-2.5 bg-secondary-900 hover:bg-black text-white rounded-xl font-bold text-xs shadow-md transition-colors"
+                      >
+                        Ir a Mis Campañas ➔
+                      </button>
+                    </div>
+                  ) : (
+                    Object.keys(state.activeFilters).length > 0 && (
+                       <button onClick={handleClearFilters} className="mt-6 text-primary-600 text-sm font-bold hover:underline">
+                           Limpiar filtros activos
+                       </button>
+                    )
                   )}
                 </div>
               ) : (

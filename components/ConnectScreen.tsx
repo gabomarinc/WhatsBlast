@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { User, UploadRecord } from '../types';
+import { User } from '../types';
 import { NeonService } from '../services/neon';
 
 interface ConnectScreenProps {
@@ -11,6 +11,7 @@ interface ConnectScreenProps {
   currentUser?: User | null;
   onLogout?: () => void;
   onResume?: (uploadId: number) => void;
+  onGoToDashboard?: () => void;
 }
 
 // View state for the right panel
@@ -77,7 +78,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   isLoading,
   currentUser,
   onLogout,
-  onResume
+  onGoToDashboard
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   
@@ -94,17 +95,6 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  
-  // History State
-  const [history, setHistory] = useState<UploadRecord[]>([]);
-
-  useEffect(() => {
-    if (currentUser && NeonService.isConnected()) {
-        NeonService.getUserUploads(currentUser.email)
-            .then(data => setHistory(data))
-            .catch(console.error);
-    }
-  }, [currentUser]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -259,14 +249,24 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
               )}
             </>
           ) : (
-            onLogout && (
-              <button 
-                onClick={onLogout} 
-                className="px-5 py-2 rounded-full border border-red-400 text-red-400 text-xs md:text-sm font-bold hover:bg-red-500/10 transition-all"
-              >
-                Cerrar sesión
-              </button>
-            )
+            <div className="flex items-center gap-3">
+              {onGoToDashboard && (
+                <button 
+                  onClick={onGoToDashboard} 
+                  className="px-5 py-2 rounded-full bg-primary-500 text-white text-xs md:text-sm font-black hover:bg-primary-600 transition-all shadow-lg shadow-primary-500/20"
+                >
+                  Panel de control
+                </button>
+              )}
+              {onLogout && (
+                <button 
+                  onClick={onLogout} 
+                  className="px-5 py-2 rounded-full border border-red-400 text-red-400 text-xs md:text-sm font-bold hover:bg-red-500/10 transition-all"
+                >
+                  Cerrar sesión
+                </button>
+              )}
+            </div>
           )}
         </div>
       </nav>
@@ -751,34 +751,6 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
 
         </div>
 
-        {/* History campaigns displayed beautifully at the bottom center if logged in */}
-        {currentUser && NeonService.isConnected() && history.length > 0 && (
-          <div className="max-w-4xl mx-auto mt-16 border-t border-secondary-100 pt-10">
-            <h3 className="text-xs font-black text-secondary-400 uppercase tracking-widest text-center mb-6">Tus Campañas Recientes</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {history.slice(0, 6).map((record) => {
-                const percent = record.total_prospects ? Math.round((record.contacted_count || 0) / record.total_prospects * 100) : 0;
-                return (
-                  <div 
-                    key={record.id}
-                    onClick={() => onResume && onResume(record.id)}
-                    className="p-4 bg-secondary-50 hover:bg-primary-50/50 border border-secondary-100 rounded-2xl cursor-pointer transition-all flex items-center justify-between group"
-                  >
-                    <div className="min-w-0 pr-3">
-                      <p className="text-xs font-black text-secondary-800 truncate group-hover:text-primary-500">{record.filename}</p>
-                      <p className="text-[10px] text-secondary-400 font-bold mt-1">
-                        {record.contacted_count}/{record.total_prospects} Contactados
-                      </p>
-                    </div>
-                    <div className="text-xs font-black text-primary-500 bg-white px-2 py-1 rounded-lg border border-secondary-100 shadow-sm shrink-0">
-                      {percent}%
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </section>
 
     </div>
