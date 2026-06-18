@@ -332,7 +332,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
               <motion.div 
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-[10%] left-[-15%] md:left-[-5%] lg:left-[0%] z-30 pointer-events-auto"
+                className="absolute top-[10%] lg:left-[-12%] xl:left-[-18%] z-30 pointer-events-auto"
               >
                 <div className="w-56 aspect-[3/3.2] bg-white/10 backdrop-blur-lg border border-white/20 rounded-[2rem] p-5 flex flex-col justify-between rotate-[-6deg] shadow-2xl hover:rotate-0 transition-all duration-500">
                   <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -364,7 +364,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
               <motion.div 
                 animate={{ y: [0, -12, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute top-[10%] right-[-15%] md:right-[-5%] lg:right-[0%] z-30 pointer-events-auto"
+                className="absolute top-[10%] lg:right-[-12%] xl:right-[-18%] z-30 pointer-events-auto"
               >
                 <div className="w-56 aspect-[3/3.2] bg-white/10 backdrop-blur-lg border border-white/20 rounded-[2rem] p-5 flex flex-col justify-between rotate-[6deg] shadow-2xl hover:rotate-0 transition-all duration-500">
                   <div className="flex items-center gap-2 mb-3">
