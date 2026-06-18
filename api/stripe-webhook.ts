@@ -57,9 +57,9 @@ export default async function handler(req: any, res: any) {
         // Update user plan to 'pro' and role to 'user'
         const result = await sql`
           UPDATE users 
-          SET plan = 'pro', role = 'user'
+          SET plan = 'pro', role = 'user', stripe_customer_id = ${session.customer || null}, stripe_subscription_id = ${session.subscription || null}
           WHERE LOWER(email) = ${cleanEmail}
-          RETURNING email, plan, role
+          RETURNING email, plan, role, stripe_customer_id, stripe_subscription_id
         `;
         console.log(`✅ Webhook: User ${cleanEmail} upgraded successfully`, result);
       } catch (dbErr) {

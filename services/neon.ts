@@ -71,6 +71,8 @@ export const NeonService = {
           logo_url TEXT,
           plan TEXT DEFAULT 'free',
           role TEXT DEFAULT 'user',
+          stripe_customer_id TEXT,
+          stripe_subscription_id TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           recovery_code TEXT,
@@ -85,9 +87,10 @@ export const NeonService = {
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS logo_url TEXT`; } catch (e) {}
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free'`; } catch (e) {}
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user'`; } catch (e) {}
-      // Recovery columns
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_code TEXT`; } catch (e) {}
       try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_expires TIMESTAMP`; } catch (e) {}
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT`; } catch (e) {}
+      try { await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT`; } catch (e) {}
 
       // 3. Uploads Table
       await sql`
