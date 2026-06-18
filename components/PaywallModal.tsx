@@ -4,7 +4,6 @@ import NumberFlow from '@number-flow/react';
 import { CheckCheck, Zap, Lock } from 'lucide-react';
 import { NeonService } from '../services/neon';
 import { User } from '../types';
-import { STRIPE_MONTHLY_LINK, STRIPE_ANNUAL_LINK } from '../constants';
 import { TimelineContent } from './ui/timeline-animation';
 import { VerticalCutReveal } from './ui/vertical-cut-reveal';
 import { cn } from '../lib/utils';
@@ -105,6 +104,32 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
 
   if (!isOpen) return null;
 
+  const triggerCheckout = async () => {
+    setError(null);
+    setIsLoading(true);
+    try {
+        const userEmail = currentUser?.email || '';
+        const sessionRes = await fetch('/api/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, plan })
+        });
+        const sessionData = await sessionRes.json();
+        if (sessionData.url) {
+            window.open(sessionData.url, '_blank');
+            return true;
+        } else {
+            setError(sessionData.error || "No se pudo generar la sesión de Stripe.");
+            return false;
+        }
+    } catch (err) {
+        setError("Error al conectar con la pasarela de Stripe.");
+        return false;
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
   const handleUpgradeClick = async (e: FormEvent) => {
     e.preventDefault();
     if (!name || !company || !password || !confirmPassword) {
@@ -127,16 +152,14 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
     const res = await NeonService.saveGuestCredentialsAwaitingPayment(userEmail, password, name, company);
     
     if (res.success && res.user) {
-        const stripeBaseLink = plan === 'monthly' ? STRIPE_MONTHLY_LINK : STRIPE_ANNUAL_LINK;
-        // Prefill email and set client_reference_id to user's email for secure webhook mapping
-        const checkoutUrl = `${stripeBaseLink}?client_reference_id=${encodeURIComponent(userEmail)}&prefilled_email=${encodeURIComponent(userEmail)}`;
-        
-        window.open(checkoutUrl, '_blank');
-        setStep('success');
+        const success = await triggerCheckout();
+        if (success) {
+            setStep('success');
+        }
     } else {
         setError(res.error || "Hubo un error al procesar tu cuenta.");
+        setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleVerifyPayment = async () => {
@@ -429,14 +452,11 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
               </button>
 
               <button 
-                onClick={() => {
-                  const stripeBaseLink = plan === 'monthly' ? STRIPE_MONTHLY_LINK : STRIPE_ANNUAL_LINK;
-                  const userEmail = currentUser?.email || '';
-                  window.open(`${stripeBaseLink}?client_reference_id=${encodeURIComponent(userEmail)}&prefilled_email=${encodeURIComponent(userEmail)}`, '_blank');
-                }}
-                className="w-full py-2 bg-secondary-50 text-secondary-500 rounded-xl font-bold text-xs hover:bg-secondary-100 transition-colors"
+                onClick={triggerCheckout}
+                disabled={isLoading}
+                className="w-full py-2 bg-secondary-50 text-secondary-500 rounded-xl font-bold text-xs hover:bg-secondary-100 transition-colors disabled:opacity-50"
               >
-                Volver a abrir ventana de pago ↗
+                {isLoading ? 'Abriendo Stripe...' : 'Volver a abrir ventana de pago ↗'}
               </button>
             </div>
           </div>
