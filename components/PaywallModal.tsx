@@ -91,7 +91,7 @@ const PricingSwitch = ({
 
 export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallModalProps) => {
   const [step, setStep] = useState<'pitch' | 'success'>('pitch');
-  const [plan, setPlan] = useState<'monthly' | 'annual'>('monthly');
+  const [plan, setPlan] = useState<'monthly' | 'lifetime'>('monthly');
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [password, setPassword] = useState('');
@@ -104,7 +104,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
 
   if (!isOpen) return null;
 
-  const triggerCheckout = async () => {
+  const triggerCheckout = async (currentPlan: 'monthly' | 'lifetime') => {
     setError(null);
     setIsLoading(true);
     try {
@@ -112,7 +112,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
         const sessionRes = await fetch('/api/create-checkout-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: userEmail, plan })
+            body: JSON.stringify({ email: userEmail, plan: currentPlan })
         });
         const sessionData = await sessionRes.json();
         if (sessionData.url) {
@@ -152,7 +152,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
     const res = await NeonService.saveGuestCredentialsAwaitingPayment(userEmail, password, name, company);
     
     if (res.success && res.user) {
-        const success = await triggerCheckout();
+        const success = await triggerCheckout(plan);
         if (success) {
             setStep('success');
         }
@@ -217,7 +217,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
     },
   };
 
-  const currentPrice = plan === 'monthly' ? 5 : 50;
+  const currentPrice = plan === 'monthly' ? 5 : 49;
 
   const features = [
     "Contactos y envíos ilimitados",
@@ -235,7 +235,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
         className="absolute inset-0 z-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(120% 120% at 50% 100%, #fff 40%, #e9fbf8 100%)",
+              "radial-gradient(120% 120% at 50% 100%, #fff 40%, #e9fbf8 100%)",
         }}
       />
 
@@ -308,8 +308,8 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
                 <h3 className="font-black text-secondary-800 text-lg mb-4 text-center md:text-left">Selecciona tu Plan</h3>
                 <PricingSwitch
                   button1="Mensual"
-                  button2="Anual (2 Meses GRATIS)"
-                  onSwitch={(val) => setPlan(val === "0" ? "monthly" : "annual")}
+                  button2="LifeTime"
+                  onSwitch={(val) => setPlan(val === "0" ? "monthly" : "lifetime")}
                   className="w-full"
                 />
               </div>
@@ -400,16 +400,11 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
                         value={currentPrice}
                         className="text-4xl font-black"
                       />
-                      <span className="text-xs text-secondary-500 font-bold">/{plan === 'monthly' ? 'mes' : 'año'}</span>
-                      {plan === 'annual' && (
-                        <span className="text-sm text-secondary-400 line-through ml-2 font-medium">
-                          $60
-                        </span>
-                      )}
+                      <span className="text-xs text-secondary-500 font-bold">/{plan === 'monthly' ? 'mes' : 'único'}</span>
                     </div>
-                    {plan === 'annual' && (
+                    {plan === 'lifetime' && (
                       <span className="text-[10px] font-black text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md mt-1 self-start">
-                        ¡2 MESES GRATIS!
+                        ¡PAGO ÚNICO PARA SIEMPRE!
                       </span>
                     )}
                   </div>
@@ -452,7 +447,7 @@ export const PaywallModal = ({ isOpen, currentUser, onUpgradeSuccess }: PaywallM
               </button>
 
               <button 
-                onClick={triggerCheckout}
+                onClick={() => triggerCheckout(plan)}
                 disabled={isLoading}
                 className="w-full py-2 bg-secondary-50 text-secondary-500 rounded-xl font-bold text-xs hover:bg-secondary-100 transition-colors disabled:opacity-50"
               >

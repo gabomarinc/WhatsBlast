@@ -24,8 +24,8 @@ export default async function handler(req: any, res: any) {
     let targetPrice = null;
     if (plan === 'monthly') {
       targetPrice = prices.data.find(p => p.recurring?.interval === 'month');
-    } else if (plan === 'annual') {
-      targetPrice = prices.data.find(p => p.recurring?.interval === 'year');
+    } else if (plan === 'lifetime') {
+      targetPrice = prices.data.find(p => p.type === 'one_time');
     }
 
     if (!targetPrice) {
@@ -44,7 +44,7 @@ export default async function handler(req: any, res: any) {
           quantity: 1,
         },
       ],
-      mode: 'subscription',
+      mode: plan === 'lifetime' ? 'payment' : 'subscription',
       customer_email: email,
       client_reference_id: email,
       success_url: `${origin}/?payment_success=true`,
