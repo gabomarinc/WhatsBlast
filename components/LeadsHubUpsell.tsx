@@ -27,7 +27,7 @@ export const LeadsHubUpsell: React.FC = () => {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-indigo-300 mb-6 backdrop-blur-sm">
               <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-              HumanFlow x LeadsHub
+              ReactivaLeads x LeadsHub
             </div>
             
             <h2 className="text-4xl md:text-5xl font-black mb-6 leading-tight tracking-tight">

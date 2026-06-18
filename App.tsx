@@ -457,7 +457,7 @@ const App: React.FC = () => {
       }
     }
 
-    window.open(url, 'HumanFlowWhatsApp');
+    window.open(url, 'ReactivaLeadsWhatsApp');
   };
 
   const handleFilterChange = (col: string, val: string) => {

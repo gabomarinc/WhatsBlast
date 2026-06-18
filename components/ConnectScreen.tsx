@@ -57,7 +57,7 @@ const CircularBadge = ({ onClick }: { onClick?: () => void }) => (
         <path id="circlePath" d="M 50, 50 m -36, 0 a 36,36 0 1,1 72,0 a 36,36 0 1,1 -72,0" fill="none" />
         <text className="text-[10px] font-black tracking-[0.16em] uppercase" fill="white">
           <textPath href="#circlePath" startOffset="0%">
-            PRUÉBALO GRATIS • HUMANFLOW • 
+            PRUÉBALO GRATIS • REACTIVALEADS • 
           </textPath>
         </text>
       </svg>
@@ -380,7 +380,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                     </div>
                   </div>
                   <div className="border-t border-white/10 pt-3 text-left">
-                    <p className="text-[10px] font-bold text-white">Consola HumanFlow</p>
+                    <p className="text-[10px] font-bold text-white">Consola ReactivaLeads</p>
                     <p className="text-[8px] text-secondary-300 mt-0.5">Retornos dinámicos inteligentes</p>
                   </div>
                 </div>
@@ -487,7 +487,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                                   value={email}
                                   onChange={(e) => setEmail(e.target.value)}
                                   className="w-full px-4 py-3 bg-secondary-50 border border-secondary-200 rounded-xl text-sm font-bold text-secondary-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary-200 focus:border-primary-500 placeholder:text-secondary-300"
-                                  placeholder="demo@humanflow.com"
+                                  placeholder="demo@reactivaleads.com"
                               />
                           </div>
                           <div className="group">

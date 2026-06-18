@@ -1,4 +1,4 @@
-export const APP_NAME = "HumanFlow";
+export const APP_NAME = "ReactivaLeads";
 export const WELCOME_MSG = "Vamos a hacer tu prospección más humana y simple ✨";
 
 // Used for variable suggestions in the template editor
