@@ -153,6 +153,19 @@ const App: React.FC = () => {
                   }
               }
 
+              // Google Analytics Event
+              if (typeof window !== 'undefined' && (window as any).gtag) {
+                  (window as any).gtag('event', 'login', {
+                      'method': 'credentials',
+                      'user_email': email,
+                      'user_plan': fetchedProfile.plan || 'free'
+                  });
+                  // Set user properties
+                  (window as any).gtag('set', 'user_properties', {
+                      'user_type': fetchedProfile.plan || 'free'
+                  });
+              }
+
               return true;
           } else {
               addNotification("Credenciales incorrectas.", "error");
@@ -191,6 +204,17 @@ const App: React.FC = () => {
               if (typeof window !== 'undefined' && (window as any).clarity) {
                   (window as any).clarity("identify", email);
                   (window as any).clarity("set", "user_type", "guest_free_trial");
+              }
+
+              // Google Analytics Event for Free Trial
+              if (typeof window !== 'undefined' && (window as any).gtag) {
+                  (window as any).gtag('event', 'sign_up', {
+                      'method': 'free_trial',
+                      'user_email': email
+                  });
+                  (window as any).gtag('set', 'user_properties', {
+                      'user_type': 'guest_free_trial'
+                  });
               }
 
               return true;
