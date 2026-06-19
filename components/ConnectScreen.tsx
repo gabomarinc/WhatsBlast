@@ -469,12 +469,38 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                               </button>
                           </div>
 
-                          <div className="text-center pt-2">
+                           <div className="text-center pt-2">
                               <button onClick={() => switchView('login')} className="text-xs font-bold text-secondary-500 hover:text-primary-500 transition-colors">
                                   ¿Ya tienes cuenta Pro? Inicia Sesión
                               </button>
-                          </div>
-                      </>
+                           </div>
+
+                           {/* Elemento de Confianza (Social Proof) */}
+                           <div className="mt-6 pt-4 border-t border-secondary-100/80">
+                               <div className="flex items-center gap-3 bg-secondary-50/50 border border-secondary-200/40 p-3 rounded-2xl">
+                                   {/* Client Avatars Group */}
+                                   <div className="flex -space-x-2 shrink-0">
+                                       <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                                       <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                                       <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                                       <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                                   </div>
+                                   
+                                   {/* Ratings and Stats */}
+                                   <div className="flex-1 min-w-0">
+                                       <div className="flex items-center gap-1.5">
+                                           <span className="text-xs font-black text-secondary-800">4.5/5</span>
+                                           <div className="flex text-amber-500 text-[10px]">
+                                               ★ ★ ★ ★ <span className="opacity-50">★</span>
+                                           </div>
+                                       </div>
+                                       <p className="text-[10px] text-secondary-500 font-bold leading-normal">
+                                           Confiado por más de <span className="text-primary-600 font-black">10 empresas</span> y más de <span className="text-primary-600 font-black">5,000 Leads</span> reactivados.
+                                       </p>
+                                   </div>
+                               </div>
+                           </div>
+                       </>
                   )}
 
                   {/* LOGIN VIEW */}
