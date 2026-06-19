@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import NumberFlow from '@number-flow/react';
 import { User } from '../types';
 import { NeonService } from '../services/neon';
 
@@ -95,6 +96,18 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Counter animation states
+  const [companyCount, setCompanyCount] = useState(0);
+  const [leadsCount, setLeadsCount] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCompanyCount(10);
+      setLeadsCount(5000);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -475,31 +488,31 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                               </button>
                            </div>
 
-                           {/* Elemento de Confianza (Social Proof) */}
-                           <div className="mt-6 pt-4 border-t border-secondary-100/80">
-                               <div className="flex items-center gap-3 bg-secondary-50/50 border border-secondary-200/40 p-3 rounded-2xl">
-                                   {/* Client Avatars Group */}
-                                   <div className="flex -space-x-2 shrink-0">
-                                       <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
-                                       <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
-                                       <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
-                                       <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
-                                   </div>
-                                   
-                                   {/* Ratings and Stats */}
-                                   <div className="flex-1 min-w-0">
-                                       <div className="flex items-center gap-1.5">
-                                           <span className="text-xs font-black text-secondary-800">4.5/5</span>
-                                           <div className="flex text-amber-500 text-[10px]">
-                                               ★ ★ ★ ★ <span className="opacity-50">★</span>
-                                           </div>
-                                       </div>
-                                       <p className="text-[10px] text-secondary-500 font-bold leading-normal">
-                                           Confiado por más de <span className="text-primary-600 font-black">10 empresas</span> y más de <span className="text-primary-600 font-black">5,000 Leads</span> reactivados.
-                                       </p>
-                                   </div>
-                               </div>
-                           </div>
+                            {/* Elemento de Confianza (Social Proof) */}
+                            <div className="mt-6 pt-4 border-t border-secondary-100/80">
+                                <div className="flex items-center gap-3 bg-secondary-50/50 border border-secondary-200/40 p-3 rounded-2xl">
+                                    {/* Client Avatars Group */}
+                                    <div className="flex -space-x-2 shrink-0">
+                                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                                        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                                        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&crop=faces&q=80" alt="Cliente" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                                    </div>
+                                    
+                                    {/* Ratings and Stats */}
+                                    <div className="flex-1 min-w-0 text-left">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-xs font-black text-secondary-800">4.5/5</span>
+                                            <div className="flex text-amber-500 text-[10px]">
+                                                ★ ★ ★ ★ ★
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] text-secondary-400 font-black tracking-wider uppercase leading-normal">
+                                            de satisfacción en nuestros clientes
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                        </>
                   )}
 
@@ -670,6 +683,29 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
             </div>
           )}
         </div>
+
+        {/* Contadores animados de confianza debajo del cuadro */}
+        {!currentUser && (
+          <div className="w-full max-w-md mx-auto mt-6 px-4 flex items-center justify-between gap-6 relative z-30">
+            {/* Empresa Counter */}
+            <div className="flex-1 bg-white/40 backdrop-blur-md border border-secondary-200/50 p-4 rounded-2xl flex flex-col items-center text-center shadow-lg">
+              <span className="text-secondary-400 text-[10px] font-black tracking-widest uppercase mb-1">Empresas Activas</span>
+              <div className="text-2xl font-black text-secondary-800 flex items-center gap-0.5">
+                <span>+</span>
+                <NumberFlow value={companyCount} />
+              </div>
+            </div>
+
+            {/* Leads Counter */}
+            <div className="flex-1 bg-white/40 backdrop-blur-md border border-secondary-200/50 p-4 rounded-2xl flex flex-col items-center text-center shadow-lg">
+              <span className="text-secondary-400 text-[10px] font-black tracking-widest uppercase mb-1">Leads Reactivados</span>
+              <div className="text-2xl font-black text-secondary-800 flex items-center gap-0.5">
+                <span>+</span>
+                <NumberFlow value={leadsCount} format={{ useGrouping: true }} />
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Bottom Features/PLG Details Section */}
