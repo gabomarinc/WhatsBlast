@@ -688,18 +688,18 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
         {!currentUser && (
           <div className="w-full max-w-md mx-auto mt-6 px-4 flex items-center justify-between gap-6 relative z-30">
             {/* Empresa Counter */}
-            <div className="flex-1 bg-white/40 backdrop-blur-md border border-secondary-200/50 p-4 rounded-2xl flex flex-col items-center text-center shadow-lg">
-              <span className="text-secondary-400 text-[10px] font-black tracking-widest uppercase mb-1">Empresas Activas</span>
-              <div className="text-2xl font-black text-secondary-800 flex items-center gap-0.5">
+            <div className="flex-1 bg-primary-500 border border-primary-600/30 p-4 rounded-2xl flex flex-col items-center text-center shadow-lg shadow-primary-500/20">
+              <span className="text-primary-100/90 text-[10px] font-black tracking-widest uppercase mb-1">Empresas Activas</span>
+              <div className="text-2xl font-black text-white flex items-center gap-0.5">
                 <span>+</span>
                 <NumberFlow value={companyCount} />
               </div>
             </div>
 
             {/* Leads Counter */}
-            <div className="flex-1 bg-white/40 backdrop-blur-md border border-secondary-200/50 p-4 rounded-2xl flex flex-col items-center text-center shadow-lg">
-              <span className="text-secondary-400 text-[10px] font-black tracking-widest uppercase mb-1">Leads Reactivados</span>
-              <div className="text-2xl font-black text-secondary-800 flex items-center gap-0.5">
+            <div className="flex-1 bg-primary-500 border border-primary-600/30 p-4 rounded-2xl flex flex-col items-center text-center shadow-lg shadow-primary-500/20">
+              <span className="text-primary-100/90 text-[10px] font-black tracking-widest uppercase mb-1">Leads Reactivados</span>
+              <div className="text-2xl font-black text-white flex items-center gap-0.5">
                 <span>+</span>
                 <NumberFlow value={leadsCount} format={{ useGrouping: true }} />
               </div>
