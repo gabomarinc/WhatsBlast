@@ -126,7 +126,6 @@ const App: React.FC = () => {
     setSentIds(new Set());
     addNotification("Sesión cerrada correctamente", "info");
   };
-
   // STRICT LOGIN HANDLER
   const handleLogin = async (email: string, password: string): Promise<boolean> => {
       setState(prev => ({ ...prev, isLoading: true }));
@@ -144,6 +143,16 @@ const App: React.FC = () => {
               localStorage.setItem(SESSION_KEY, JSON.stringify(fetchedProfile));
               setState(prev => ({ ...prev, currentUser: fetchedProfile, isLoading: false }));
               addNotification(`¡Bienvenido, ${fetchedProfile.name || email}! 👋`, "success");
+              
+              // Microsoft Clarity Identify
+              if (typeof window !== 'undefined' && (window as any).clarity) {
+                  (window as any).clarity("identify", email);
+                  (window as any).clarity("set", "user_type", fetchedProfile.plan || 'free');
+                  if (fetchedProfile.name) {
+                      (window as any).clarity("set", "name", fetchedProfile.name);
+                  }
+              }
+
               return true;
           } else {
               addNotification("Credenciales incorrectas.", "error");
@@ -158,6 +167,7 @@ const App: React.FC = () => {
           return false;
       }
   };
+
 
 
 
@@ -176,6 +186,13 @@ const App: React.FC = () => {
                   isLoading: false 
               }));
               addNotification("¡Modo de prueba activado! 🚀", "success");
+              
+              // Microsoft Clarity Identify for Guest/Free Trial
+              if (typeof window !== 'undefined' && (window as any).clarity) {
+                  (window as any).clarity("identify", email);
+                  (window as any).clarity("set", "user_type", "guest_free_trial");
+              }
+
               return true;
           } else {
               addNotification(result.error || "Error al iniciar prueba", "error");
