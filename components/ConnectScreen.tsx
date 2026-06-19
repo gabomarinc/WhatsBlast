@@ -404,8 +404,8 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                 <ArrowGreenLeft />
               </div>
 
-              {/* Decorative Arrow Right */}
-              <div className="absolute top-[5%] right-[20%] w-24 h-24 md:w-28 md:h-28 z-20">
+              {/* Decorative Arrow Right (placed next to LEADS) */}
+              <div className="absolute top-[3%] left-[64%] w-24 h-24 md:w-28 md:h-28 z-20">
                 <ArrowGreenRight />
               </div>
 
