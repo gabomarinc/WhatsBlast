@@ -26,19 +26,31 @@ export const Footer: React.FC = () => {
                 Kônsul Digital
               </a>
             </li>
+          </ul>
+        </div>
+
+        {/* Links Column: Nuestras Herramientas */}
+        <div className="flex flex-col">
+          <h4 className="text-secondary-800 font-bold uppercase tracking-wider text-sm mb-4">Nuestras Herramientas</h4>
+          <ul className="flex flex-col gap-3">
             <li>
-              <a href="https://konsul.digital/#servicios" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
-                Nuestros Servicios
+              <a href="https://process.konsul.digital/" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
+                Process by Kônsul
               </a>
             </li>
             <li>
-              <a href="https://konsul.digital/proyectos/" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
-                Proyectos / Portfolio
+              <a href="https://bills.konsul.digital/" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
+                Bills by Kônsul
               </a>
             </li>
             <li>
-              <a href="https://konsul.digital/#contacto" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
-                Contacto
+              <a href="https://kredit.konsul.digital/" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
+                Kredit by Kônsul
+              </a>
+            </li>
+            <li>
+              <a href="https://agentes.konsul.digital/" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
+                Agentes by Kônsul
               </a>
             </li>
           </ul>
