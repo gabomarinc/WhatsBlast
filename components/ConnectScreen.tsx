@@ -715,6 +715,43 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
 
       {/* Bottom Features/PLG Details Section */}
       <section className="bg-white text-secondary-800 rounded-t-[2.5rem] md:rounded-t-[3.5rem] px-6 py-12 md:px-10 md:py-16 relative z-20 shadow-[0_-20px_50px_rgba(0,0,0,0.15)] mt-auto w-full">
+        
+        {/* Pricing Section */}
+        <div className="max-w-4xl mx-auto mb-20 text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex flex-col items-center"
+          >
+            <span className="text-primary-500 font-black tracking-widest uppercase mb-3 text-sm">ACCESO ILIMITADO</span>
+            <h2 className="text-3xl md:text-5xl font-black text-secondary-800 mb-6 uppercase leading-tight">
+              Un solo pago. <br /> <span className="text-primary-500">Valor para siempre.</span>
+            </h2>
+            <div className="flex flex-col md:flex-row items-center justify-center gap-6 mt-4 w-full">
+              
+              <div className="bg-secondary-50 border border-secondary-200 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-300 max-w-sm w-full relative overflow-hidden transform hover:-translate-y-1">
+                <div className="absolute top-0 right-0 bg-primary-500 text-white text-[10px] font-black tracking-widest px-4 py-1.5 rounded-bl-2xl uppercase">Más Popular</div>
+                <h3 className="text-xl font-black uppercase text-secondary-600 mb-2 tracking-wide">Licencia Lifetime</h3>
+                <div className="flex items-baseline justify-center gap-1 mb-4">
+                  <span className="text-5xl font-black text-secondary-800">$49</span>
+                  <span className="text-sm font-bold text-secondary-400">USD</span>
+                </div>
+                <p className="text-sm text-secondary-500 mb-8 font-medium px-4">Pago único. Envía campañas ilimitadas de WhatsApp y reactiva tus ventas para siempre.</p>
+                <button onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  // Simulate click on email input to focus
+                  const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
+                  if (emailInput) emailInput.focus();
+                }} className="w-full bg-primary-500 text-white font-black py-4 rounded-xl hover:bg-primary-600 transition-colors shadow-lg shadow-primary-500/30 uppercase tracking-wider text-sm">
+                  EMPEZAR AHORA
+                </button>
+              </div>
+
+            </div>
+          </motion.div>
+        </div>
+
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           
           {/* Feature Card 1 */}

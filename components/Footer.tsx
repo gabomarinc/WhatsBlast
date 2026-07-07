@@ -13,7 +13,7 @@ export const Footer: React.FC = () => {
             className="h-10 w-auto object-contain mb-4 self-start"
           />
           <p className="text-sm text-secondary-500 font-medium leading-relaxed">
-            Potencia tus ventas y reactiva a tus prospectos con automatizaciones inteligentes y envíos orgánicos por WhatsApp.
+            Somos una casa productora de tecnología que crea soluciones a la medida y llave en mano, para automatizar tus procesos comerciales. Hacemos que la inteligencia artificial trabaje en segundo plano mientras tú dominas tu industria.
           </p>
         </div>
 
