@@ -15,7 +15,7 @@ export default async function handler(req: any, res: any) {
   const smtpPort = process.env.SMTP_PORT || '587';
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
-  const smtpFrom = process.env.SMTP_FROM || `"WhatsBlast" <noreply@whatsblast.com>`;
+  const smtpFrom = process.env.SMTP_FROM || `"WhatsBlast" <somos@konsul.digital>`;
 
   // 2. Check if Resend API Key is present
   const resendApiKey = process.env.RESEND_API_KEY;
