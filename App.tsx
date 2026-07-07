@@ -12,7 +12,6 @@ import { LeadsHubUpsell } from './components/LeadsHubUpsell';
 import { PaywallModal } from './components/PaywallModal';
 import { DataService } from './services/dataService';
 import { NeonService } from './services/neon';
-import { Footer } from './components/Footer';
 import { AppState, Notification, Prospect, Template, ColumnMapping, User } from './types';
 import { APP_NAME } from './constants';
 import { AnimatedDock } from './components/ui/animated-dock';
@@ -93,7 +92,7 @@ const App: React.FC = () => {
             initialCount = ids.length;
           }
         }
-        setState(prev => ({ ...prev, currentUser: user, globalSentCount: initialCount }));
+        setState(prev => ({ ...prev, currentUser: user, step: 'dashboard', globalSentCount: initialCount }));
         
         if (NeonService.isConnected() && user.email) {
           NeonService.getSentCount(user.email).then(count => {
@@ -105,6 +104,85 @@ const App: React.FC = () => {
       }
     }
   }, []);
+
+  // Synchronize state with URL Hash
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash || '#home';
+      
+      // If user is NOT logged in:
+      const savedSession = localStorage.getItem(SESSION_KEY);
+      if (!savedSession) {
+        if (hash !== '#home' && hash !== '#login' && hash !== '#connect') {
+          window.location.hash = '#home';
+          return;
+        }
+        setState(prev => {
+          if (prev.step !== 'connect') {
+            return { ...prev, step: 'connect' };
+          }
+          return prev;
+        });
+        return;
+      }
+
+      // If user IS logged in:
+      if (hash === '#home' || hash === '#login' || hash === '#connect') {
+        window.location.hash = '#dashboard';
+        return;
+      }
+
+      if (hash === '#dashboard') {
+        setState(prev => {
+          if (prev.step !== 'dashboard') {
+            return { ...prev, step: 'dashboard' };
+          }
+          return prev;
+        });
+        setActiveTab('list');
+      } else if (hash === '#templates') {
+        setState(prev => {
+          if (prev.step !== 'dashboard') {
+            return { ...prev, step: 'dashboard' };
+          }
+          return prev;
+        });
+        setActiveTab('template');
+      } else if (hash === '#campaigns') {
+        setState(prev => {
+          if (prev.step !== 'dashboard') {
+            return { ...prev, step: 'dashboard' };
+          }
+          return prev;
+        });
+        setActiveTab('campaigns');
+      } else if (hash === '#automate') {
+        setState(prev => {
+          if (prev.step !== 'dashboard') {
+            return { ...prev, step: 'dashboard' };
+          }
+          return prev;
+        });
+        setActiveTab('automate');
+      } else if (hash === '#configure') {
+        setState(prev => {
+          if (prev.step !== 'configure') {
+            if (prev.workbook) {
+              return { ...prev, step: 'configure' };
+            } else {
+              window.location.hash = '#dashboard';
+            }
+          }
+          return prev;
+        });
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange();
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [state.workbook]);
 
   const addNotification = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     const id = Date.now().toString();
@@ -125,6 +203,7 @@ const App: React.FC = () => {
       workbook: null
     }));
     setSentIds(new Set());
+    window.location.hash = '#home';
     addNotification("Sesión cerrada correctamente", "info");
   };
   // STRICT LOGIN HANDLER
@@ -142,7 +221,8 @@ const App: React.FC = () => {
           
           if (fetchedProfile) {
               localStorage.setItem(SESSION_KEY, JSON.stringify(fetchedProfile));
-              setState(prev => ({ ...prev, currentUser: fetchedProfile, isLoading: false }));
+              setState(prev => ({ ...prev, currentUser: fetchedProfile, step: 'dashboard', isLoading: false }));
+              window.location.hash = '#dashboard';
               addNotification(`¡Bienvenido, ${fetchedProfile.name || email}! 👋`, "success");
               
               // Microsoft Clarity Identify
@@ -196,9 +276,11 @@ const App: React.FC = () => {
               setState(prev => ({ 
                   ...prev, 
                   currentUser: result.user!, 
+                  step: 'dashboard',
                   globalSentCount: sentCount,
                   isLoading: false 
               }));
+              window.location.hash = '#dashboard';
               addNotification("¡Modo de prueba activado! 🚀", "success");
               
               // Microsoft Clarity Identify for Guest/Free Trial
@@ -278,6 +360,7 @@ const App: React.FC = () => {
           sheetTabs: result.data!.sheets,
           isLoading: false 
         }));
+        window.location.hash = '#configure';
       } else {
         addNotification(result.error || "Error al leer archivo", "error");
         setState(prev => ({ ...prev, isLoading: false }));
@@ -434,6 +517,7 @@ const App: React.FC = () => {
     }
 
     setState(prev => ({ ...prev, step: 'dashboard', isLoading: false }));
+    window.location.hash = '#dashboard';
   };
 
   const handleSaveTemplates = (updated: Template[]) => {
@@ -592,6 +676,18 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white pb-20 font-sans text-secondary-800">
+      <input 
+        type="file" 
+        id="dashboard-file-input"
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            handleFileSelect(e.target.files[0]);
+          }
+        }}
+        className="hidden"
+        accept=".xlsx, .xls, .csv"
+        disabled={state.isLoading}
+      />
       <header className="bg-white border-b border-secondary-100 sticky top-0 z-30 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4 group cursor-default">
@@ -660,7 +756,14 @@ const App: React.FC = () => {
             <ExpandableTabs
               className="hidden md:flex"
               activeTabId={activeTab}
-              onChangeTab={(id) => setActiveTab(id as any)}
+              onChangeTab={(id) => {
+                const tab = id as any;
+                setActiveTab(tab);
+                if (tab === 'list') window.location.hash = '#dashboard';
+                else if (tab === 'template') window.location.hash = '#templates';
+                else if (tab === 'campaigns') window.location.hash = '#campaigns';
+                else if (tab === 'automate') window.location.hash = '#automate';
+              }}
               tabs={[
                 {
                   id: "list",
@@ -788,7 +891,7 @@ const App: React.FC = () => {
                   {prospects.length === 0 ? (
                     <div className="flex gap-3 mt-6">
                       <button 
-                        onClick={() => setState(prev => ({ ...prev, step: 'connect' }))}
+                        onClick={() => document.getElementById('dashboard-file-input')?.click()}
                         className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-bold text-xs shadow-md shadow-primary-500/10 transition-colors"
                       >
                         Subir Archivo 📁
@@ -893,25 +996,37 @@ const App: React.FC = () => {
               {
                 label: "Contactos",
                 Icon: <Users size={20} />,
-                onClick: () => setActiveTab('list'),
+                onClick: () => {
+                  setActiveTab('list');
+                  window.location.hash = '#dashboard';
+                },
                 isActive: activeTab === 'list'
               },
               {
                 label: "Plantillas",
                 Icon: <MessageSquare size={20} />,
-                onClick: () => setActiveTab('template'),
+                onClick: () => {
+                  setActiveTab('template');
+                  window.location.hash = '#templates';
+                },
                 isActive: activeTab === 'template'
               },
               {
                 label: "Campañas",
                 Icon: <BarChart3 size={20} />,
-                onClick: () => setActiveTab('campaigns'),
+                onClick: () => {
+                  setActiveTab('campaigns');
+                  window.location.hash = '#campaigns';
+                },
                 isActive: activeTab === 'campaigns'
               },
               {
                 label: "Automatizar",
                 Icon: <Zap size={20} />,
-                onClick: () => setActiveTab('automate'),
+                onClick: () => {
+                  setActiveTab('automate');
+                  window.location.hash = '#automate';
+                },
                 isActive: activeTab === 'automate'
               }
             ]}
@@ -920,7 +1035,6 @@ const App: React.FC = () => {
       )}
 
       <ToastContainer notifications={notifications} removeNotification={removeNotification} />
-      <Footer />
     </div>
   );
 };
