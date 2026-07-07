@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import NumberFlow from '@number-flow/react';
 import { User } from '../types';
 import { NeonService } from '../services/neon';
+import { Footer } from './Footer';
 
 interface ConnectScreenProps {
   onFileSelect: (file: File) => void;
@@ -819,6 +820,7 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
 
       </section>
 
+      <Footer />
     </div>
   );
 };

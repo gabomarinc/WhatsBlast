@@ -2,87 +2,80 @@ import React from 'react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-white border-t border-secondary-200 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Brand Column */}
-          <div className="col-span-1 md:col-span-1">
-            <h3 className="text-lg font-black text-secondary-900 tracking-tight mb-4">
-              ReactivaLeads <span className="text-primary-500">by Kônsul</span>
-            </h3>
-            <p className="text-sm text-secondary-600 leading-relaxed mb-6">
-              Potenciamos tus ventas a través de flujos de prospección ágiles y eficientes. 
-              Diseñado para equipos que buscan resultados reales.
-            </p>
-          </div>
-
-          {/* Links Column */}
-          <div className="col-span-1 md:col-span-1">
-            <h4 className="text-xs uppercase font-bold tracking-widest text-secondary-900 mb-4">
-              Nuestra Agencia
-            </h4>
-            <ul className="space-y-3">
-              <li>
-                <a href="https://konsul.digital/" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-secondary-600 hover:text-primary-500 transition-colors">
-                  Kônsul Digital (Inicio)
-                </a>
-              </li>
-              <li>
-                <a href="https://konsul.digital/servicios" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-secondary-600 hover:text-primary-500 transition-colors">
-                  Nuestros Servicios
-                </a>
-              </li>
-              <li>
-                <a href="https://konsul.digital/nosotros" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-secondary-600 hover:text-primary-500 transition-colors">
-                  Sobre Nosotros
-                </a>
-              </li>
-              <li>
-                <a href="https://konsul.digital/contacto" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-secondary-600 hover:text-primary-500 transition-colors">
-                  Contacto
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Resources / Legal Column */}
-          <div className="col-span-1 md:col-span-1">
-            <h4 className="text-xs uppercase font-bold tracking-widest text-secondary-900 mb-4">
-              Legal y Soporte
-            </h4>
-            <ul className="space-y-3">
-              <li>
-                <a href="mailto:somos@konsul.digital" className="text-sm font-medium text-secondary-600 hover:text-primary-500 transition-colors">
-                  Soporte Técnico
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-sm font-medium text-secondary-600 hover:text-primary-500 transition-colors">
-                  Términos y Condiciones
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-sm font-medium text-secondary-600 hover:text-primary-500 transition-colors">
-                  Política de Privacidad
-                </a>
-              </li>
-            </ul>
-          </div>
-          
-        </div>
+    <footer className="bg-white text-secondary-800 py-12 md:py-16 mt-auto relative z-20">
+      <div className="max-w-7xl mx-auto px-6 md:px-10 flex flex-col md:flex-row justify-between items-start gap-10">
         
-        {/* Bottom Bar */}
-        <div className="border-t border-secondary-100 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs font-medium text-secondary-500">
-            &copy; {new Date().getFullYear()} ReactivaLeads by Kônsul. Todos los derechos reservados.
+        {/* Brand / Info */}
+        <div className="flex flex-col max-w-xs">
+          <img 
+            src="https://konsul.digital/images/Konsul%20logo%20general.png"
+            alt="Kônsul Logo" 
+            className="h-10 w-auto object-contain mb-4 self-start"
+          />
+          <p className="text-sm text-secondary-500 font-medium leading-relaxed">
+            Potencia tus ventas y reactiva a tus prospectos con automatizaciones inteligentes y envíos orgánicos por WhatsApp.
           </p>
-          <div className="flex gap-4">
-            <a href="https://konsul.digital/" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-secondary-400 hover:text-primary-500 transition-colors">
-              www.konsul.digital
-            </a>
-          </div>
         </div>
+
+        {/* Links Column 1 */}
+        <div className="flex flex-col">
+          <h4 className="text-secondary-800 font-bold uppercase tracking-wider text-sm mb-4">Nuestra Agencia</h4>
+          <ul className="flex flex-col gap-3">
+            <li>
+              <a href="https://konsul.digital/" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
+                Kônsul Digital
+              </a>
+            </li>
+            <li>
+              <a href="https://konsul.digital/#servicios" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
+                Nuestros Servicios
+              </a>
+            </li>
+            <li>
+              <a href="https://konsul.digital/proyectos/" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
+                Proyectos / Portfolio
+              </a>
+            </li>
+            <li>
+              <a href="https://konsul.digital/#contacto" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
+                Contacto
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        {/* Links Column 2 */}
+        <div className="flex flex-col">
+          <h4 className="text-secondary-800 font-bold uppercase tracking-wider text-sm mb-4">ReactivaLeads</h4>
+          <ul className="flex flex-col gap-3">
+            <li>
+              <span className="text-secondary-500 font-medium text-sm">
+                Automatización de Ventas
+              </span>
+            </li>
+            <li>
+              <span className="text-secondary-500 font-medium text-sm">
+                Seguimiento por WhatsApp
+              </span>
+            </li>
+            <li>
+              <span className="text-secondary-500 font-medium text-sm">
+                Gestión de Leads
+              </span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+      
+      {/* Copyright */}
+      <div className="max-w-7xl mx-auto px-6 md:px-10 mt-12 pt-8 border-t border-secondary-100 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p className="text-xs font-medium text-secondary-400">
+          © {new Date().getFullYear()} ReactivaLeads by Kônsul. Todos los derechos reservados.
+        </p>
+        <p className="text-xs font-medium text-secondary-400">
+          Made with <span className="text-red-500">❤️</span> by <a href="https://konsul.digital" target="_blank" rel="noreferrer" className="hover:text-primary-500 transition-colors font-bold">Kônsul Digital</a>
+        </p>
       </div>
     </footer>
   );
