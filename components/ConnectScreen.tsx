@@ -166,7 +166,11 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
       const res = await NeonService.requestPasswordRecovery(email);
       if (res.success && res.code) {
           setAuthView('reset');
-          setSuccessMsg(`📧 [SIMULACIÓN] Tu código es: ${res.code}`);
+          if (res.simulated) {
+              setSuccessMsg(`📧 [SIMULACIÓN] Tu código es: ${res.code}`);
+          } else {
+              setSuccessMsg("📧 Hemos enviado un código de recuperación a tu correo electrónico.");
+          }
           setTimeout(() => setSuccessMsg(null), 10000);
       } else {
           setError(res.error || "No se pudo enviar el código.");

@@ -437,7 +437,7 @@ export const NeonService = {
    * In a real app, you would send this via Email API.
    * Here, we return the code to the UI to simulate the email arrival.
    */
-  async requestPasswordRecovery(email: string): Promise<{ success: boolean; code?: string; error?: string }> {
+  async requestPasswordRecovery(email: string): Promise<{ success: boolean; code?: string; error?: string; simulated?: boolean }> {
       if (!sql) return { success: false, error: "Sin conexión a DB" };
       const cleanEmail = email.toLowerCase().trim();
 
@@ -456,9 +456,30 @@ export const NeonService = {
             WHERE email = ${cleanEmail}
         `;
 
-        // We return the code here ONLY because we don't have a real SMTP server.
-        // This allows the frontend to show a "Simulated Email" toast.
-        return { success: true, code }; 
+        // Send recovery email via API
+        try {
+          const emailResponse = await fetch('/api/send-recovery-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email: cleanEmail, code }),
+          });
+
+          if (emailResponse.ok) {
+            const data = await emailResponse.json();
+            return {
+              success: true,
+              code,
+              simulated: data.simulated ?? false,
+            };
+          }
+        } catch (emailErr) {
+          console.error("⚠️ Failed to call email endpoint:", emailErr);
+        }
+
+        // Fallback if the API fails or is not fully set up
+        return { success: true, code, simulated: true }; 
 
       } catch (e) {
           console.error(e);
