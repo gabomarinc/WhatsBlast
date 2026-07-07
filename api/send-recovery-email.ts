@@ -15,21 +15,21 @@ export default async function handler(req: any, res: any) {
   const smtpPort = process.env.SMTP_PORT || '587';
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
-  const smtpFrom = process.env.SMTP_FROM || `"WhatsBlast" <somos@konsul.digital>`;
+  const smtpFrom = process.env.SMTP_FROM || `"ReactivaLeads by Kônsul" <somos@konsul.digital>`;
 
   // 2. Check if Resend API Key is present
   const resendApiKey = process.env.RESEND_API_KEY;
   const resendFrom = process.env.RESEND_FROM || smtpFrom;
 
-  const emailSubject = 'Código de recuperación de contraseña - WhatsBlast';
+  const emailSubject = 'Código de recuperación de contraseña - ReactivaLeads by Kônsul';
   const emailHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
-      <h2 style="color: #4f46e5; margin-bottom: 16px;">Recuperación de Contraseña</h2>
+      <h2 style="color: #27bea7; margin-bottom: 16px;">Recuperación de Contraseña</h2>
       <p style="font-size: 16px; color: #374151; line-height: 1.5;">
-        Has solicitado restablecer tu contraseña en <strong>WhatsBlast</strong>. Utiliza el siguiente código de seguridad de 4 dígitos para continuar:
+        Has solicitado restablecer tu contraseña en <strong>ReactivaLeads by Kônsul</strong>. Utiliza el siguiente código de seguridad de 4 dígitos para continuar:
       </p>
       <div style="text-align: center; margin: 32px 0;">
-        <span style="font-size: 32px; font-weight: 800; tracking-widest: 4px; color: #4f46e5; background-color: #f3f4f6; padding: 12px 24px; border-radius: 8px; letter-spacing: 6px; display: inline-block;">
+        <span style="font-size: 32px; font-weight: 800; tracking-widest: 4px; color: #27bea7; background-color: #f3f4f6; padding: 12px 24px; border-radius: 8px; letter-spacing: 6px; display: inline-block;">
           ${code}
         </span>
       </div>
@@ -38,7 +38,7 @@ export default async function handler(req: any, res: any) {
       </p>
       <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
       <p style="font-size: 12px; color: #9ca3af; text-align: center;">
-        WhatsBlast &copy; ${new Date().getFullYear()} - Todos los derechos reservados.
+        ReactivaLeads by Kônsul &copy; ${new Date().getFullYear()} - Todos los derechos reservados.
       </p>
     </div>
   `;
