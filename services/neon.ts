@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { Prospect, User, UploadRecord } from '../types';
+import { Prospect, User, UploadRecord, Template } from '../types';
 import bcrypt from 'bcryptjs';
 
 /**
@@ -112,6 +112,30 @@ export const NeonService = {
           user_email TEXT REFERENCES users(email),
           data JSONB NOT NULL,
           status TEXT DEFAULT 'Nuevo',
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+
+      // 5. API Tokens Table
+      await sql`
+        CREATE TABLE IF NOT EXISTS api_tokens (
+          id SERIAL PRIMARY KEY,
+          user_email TEXT REFERENCES users(email) ON DELETE CASCADE,
+          name VARCHAR(100) NOT NULL,
+          token VARCHAR(255) UNIQUE NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          last_used_at TIMESTAMP
+        )
+      `;
+
+      // 6. Templates Table
+      await sql`
+        CREATE TABLE IF NOT EXISTS templates (
+          id TEXT PRIMARY KEY,
+          user_email TEXT REFERENCES users(email) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          content TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `;
@@ -615,5 +639,91 @@ export const NeonService = {
       }));
 
       return { prospects, mapping: uploadRes[0].mapped_config };
+  },
+
+  // API Token DB Methods
+  async getTokens(email: string) {
+    if (!sql) return [];
+    try {
+      const tokens = await sql`
+        SELECT id, name, token, created_at, last_used_at
+        FROM api_tokens
+        WHERE user_email = ${email}
+        ORDER BY created_at DESC
+      `;
+      return tokens;
+    } catch (e) {
+      console.error("Error fetching tokens:", e);
+      return [];
+    }
+  },
+
+  async createToken(email: string, name: string, token: string) {
+    if (!sql) return null;
+    try {
+      const result = await sql`
+        INSERT INTO api_tokens (user_email, name, token)
+        VALUES (${email}, ${name}, ${token})
+        RETURNING id, name, token, created_at
+      `;
+      return result[0];
+    } catch (e) {
+      console.error("Error creating token:", e);
+      return null;
+    }
+  },
+
+  async deleteToken(email: string, tokenId: number) {
+    if (!sql) return false;
+    try {
+      await sql`
+        DELETE FROM api_tokens
+        WHERE id = ${tokenId} AND user_email = ${email}
+      `;
+      return true;
+    } catch (e) {
+      console.error("Error deleting token:", e);
+      return false;
+    }
+  },
+
+  // Templates DB Sync Methods
+  async syncTemplates(email: string, templates: Template[]) {
+    if (!sql) return false;
+    try {
+      // 1. Delete old templates in DB for this user
+      await sql`DELETE FROM templates WHERE user_email = ${email}`;
+
+      // 2. Insert new ones
+      for (const t of templates) {
+        await sql`
+          INSERT INTO templates (id, user_email, name, content)
+          VALUES (${t.id}, ${email}, ${t.name}, ${t.content})
+        `;
+      }
+      return true;
+    } catch (e) {
+      console.error("Error syncing templates to DB:", e);
+      return false;
+    }
+  },
+
+  async getTemplatesFromDB(email: string): Promise<Template[]> {
+    if (!sql) return [];
+    try {
+      const dbTemplates = await sql`
+        SELECT id, name, content
+        FROM templates
+        WHERE user_email = ${email}
+      `;
+      return dbTemplates.map(t => ({
+        id: t.id,
+        name: t.name,
+        content: t.content
+      }));
+    } catch (e) {
+      console.error("Error loading templates from DB:", e);
+      return [];
+    }
   }
 };

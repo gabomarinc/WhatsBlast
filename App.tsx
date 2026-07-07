@@ -17,7 +17,8 @@ import { APP_NAME } from './constants';
 import { AnimatedDock } from './components/ui/animated-dock';
 import { Banner } from './components/ui/banner';
 import { ExpandableTabs } from './components/ui/expandable-tabs';
-import { Users, MessageSquare, BarChart3, Zap } from 'lucide-react';
+import { Users, MessageSquare, BarChart3, Zap, Code } from 'lucide-react';
+import { DeveloperSettings } from './components/DeveloperSettings';
 
 const SESSION_KEY = 'hf_user_session_v1';
 
@@ -62,7 +63,7 @@ const App: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [activeTab, setActiveTab] = useState<'list' | 'template' | 'campaigns' | 'automate'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'template' | 'campaigns' | 'automate' | 'dev'>('list');
   const [viewFilter, setViewFilter] = useState<'active' | 'sent'>('active');
 
   // Load resources and check session on mount
@@ -98,6 +99,9 @@ const App: React.FC = () => {
           NeonService.getSentCount(user.email).then(count => {
             setState(prev => ({ ...prev, globalSentCount: Math.max(count, initialCount) }));
           }).catch(console.error);
+
+          // Sync templates to DB
+          NeonService.syncTemplates(user.email, tpls).catch(console.error);
         }
       } catch (e) {
         localStorage.removeItem(SESSION_KEY);
@@ -164,6 +168,14 @@ const App: React.FC = () => {
           return prev;
         });
         setActiveTab('automate');
+      } else if (hash === '#dev') {
+        setState(prev => {
+          if (prev.step !== 'dashboard') {
+            return { ...prev, step: 'dashboard' };
+          }
+          return prev;
+        });
+        setActiveTab('dev');
       } else if (hash === '#configure') {
         setState(prev => {
           if (prev.step !== 'configure') {
@@ -523,6 +535,9 @@ const App: React.FC = () => {
   const handleSaveTemplates = (updated: Template[]) => {
     setTemplates(updated);
     DataService.saveTemplates(updated);
+    if (state.currentUser?.email) {
+      NeonService.syncTemplates(state.currentUser.email, updated).catch(console.error);
+    }
     addNotification("Plantillas actualizadas ✍️");
   };
 
@@ -763,6 +778,7 @@ const App: React.FC = () => {
                 else if (tab === 'template') window.location.hash = '#templates';
                 else if (tab === 'campaigns') window.location.hash = '#campaigns';
                 else if (tab === 'automate') window.location.hash = '#automate';
+                else if (tab === 'dev') window.location.hash = '#dev';
               }}
               tabs={[
                 {
@@ -788,6 +804,12 @@ const App: React.FC = () => {
                   icon: Zap,
                   label: "Automatizar (PRO)",
                   color: "bg-gradient-to-r from-indigo-500 to-purple-600",
+                },
+                {
+                  id: "dev",
+                  icon: Code,
+                  label: "API / Desarrollador",
+                  color: "bg-secondary-800",
                 },
               ]}
             />
@@ -953,6 +975,12 @@ const App: React.FC = () => {
               <LeadsHubUpsell />
             </div>
           )}
+
+          {activeTab === 'dev' && state.currentUser && (
+            <div className="max-w-5xl mx-auto pt-4">
+              <DeveloperSettings currentUser={state.currentUser} />
+            </div>
+          )}
         </div>
       </main>
 
@@ -1028,6 +1056,15 @@ const App: React.FC = () => {
                   window.location.hash = '#automate';
                 },
                 isActive: activeTab === 'automate'
+              },
+              {
+                label: "API / Dev",
+                Icon: <Code size={20} />,
+                onClick: () => {
+                  setActiveTab('dev');
+                  window.location.hash = '#dev';
+                },
+                isActive: activeTab === 'dev'
               }
             ]}
           />
