@@ -12,6 +12,7 @@ import { LeadsHubUpsell } from './components/LeadsHubUpsell';
 import { PaywallModal } from './components/PaywallModal';
 import { DataService } from './services/dataService';
 import { NeonService } from './services/neon';
+import { Footer } from './components/Footer';
 import { AppState, Notification, Prospect, Template, ColumnMapping, User } from './types';
 import { APP_NAME } from './constants';
 import { AnimatedDock } from './components/ui/animated-dock';
@@ -919,6 +920,7 @@ const App: React.FC = () => {
       )}
 
       <ToastContainer notifications={notifications} removeNotification={removeNotification} />
+      <Footer />
     </div>
   );
 };
