@@ -50,7 +50,7 @@ export const Footer: React.FC = () => {
             </li>
             <li>
               <a href="https://agentes.konsul.digital/" target="_blank" rel="noreferrer" className="text-secondary-500 hover:text-primary-500 font-medium text-sm transition-colors">
-                Agentes by Kônsul
+                LeadsHUB
               </a>
             </li>
           </ul>
