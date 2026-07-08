@@ -11,7 +11,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16' as any,
 });
 
-const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
+const dbUrl = process.env.DATABASE_URL || process.env.VITE_DATABASE_URL;
+const sql = dbUrl ? neon(dbUrl) : null;
 
 async function buffer(readable: any) {
   const chunks = [];

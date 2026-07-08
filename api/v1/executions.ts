@@ -1,7 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 import { verifyApiKey } from '../authHelper';
 
-const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
+const dbUrl = process.env.DATABASE_URL || process.env.VITE_DATABASE_URL;
+const sql = dbUrl ? neon(dbUrl) : null;
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
