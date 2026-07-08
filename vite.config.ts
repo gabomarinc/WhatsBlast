@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       // Solo inyectamos la URL de la base de datos principal
-      'process.env.DATABASE_URL': JSON.stringify(env.DATABASE_URL),
+      'process.env.DATABASE_URL': JSON.stringify(env.DATABASE_URL || env.VITE_DATABASE_URL),
     },
   };
 });
