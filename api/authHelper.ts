@@ -4,7 +4,15 @@ const dbUrl = process.env.DATABASE_URL || process.env.VITE_DATABASE_URL;
 const sql = dbUrl ? neon(dbUrl) : null;
 
 export async function verifyApiKey(req: any): Promise<{ email: string } | null> {
-  const apiKey = req.headers['x-api-key'];
+  let apiKey = req.headers['x-api-key'];
+  
+  if (!apiKey && req.headers['authorization']) {
+    const authHeader = req.headers['authorization'] as string;
+    if (authHeader.toLowerCase().startsWith('bearer ')) {
+      apiKey = authHeader.substring(7).trim();
+    }
+  }
+
   if (!apiKey || !sql) return null;
 
   try {
