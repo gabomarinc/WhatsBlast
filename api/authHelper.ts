@@ -13,6 +13,10 @@ export async function verifyApiKey(req: any): Promise<{ email: string } | null> 
     }
   }
 
+  if (!apiKey && req.query) {
+    apiKey = req.query.apiKey || req.query.api_key || req.query.token;
+  }
+
   if (!apiKey || !sql) return null;
 
   try {
