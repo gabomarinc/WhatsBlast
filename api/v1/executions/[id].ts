@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { verifyApiKey } from '../../authHelper';
+import { verifyApiKey } from '../../authHelper.js';
 
 const dbUrl = process.env.DATABASE_URL || process.env.VITE_DATABASE_URL;
 const sql = dbUrl ? neon(dbUrl) : null;
