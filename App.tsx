@@ -80,33 +80,60 @@ const App: React.FC = () => {
         });
     }
 
-    // 3. Check LocalStorage Session
-    const savedSession = localStorage.getItem(SESSION_KEY);
-    if (savedSession) {
+    // 3. Check Session (Kinde first, fallback to LocalStorage)
+    const checkAuth = async () => {
+      let activeUser: User | null = null;
+
       try {
-        const user: User = JSON.parse(savedSession);
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+        if (data.user) {
+          activeUser = {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.name,
+            logo_url: data.user.logo_url,
+            plan: 'free',
+            role: 'user'
+          };
+          localStorage.setItem(SESSION_KEY, JSON.stringify(activeUser));
+        }
+      } catch (e) {
+        console.error("Error checking Kinde session", e);
+      }
+
+      if (!activeUser) {
+        const savedSession = localStorage.getItem(SESSION_KEY);
+        if (savedSession) {
+          try {
+            activeUser = JSON.parse(savedSession);
+          } catch (e) {
+            localStorage.removeItem(SESSION_KEY);
+          }
+        }
+      }
+
+      if (activeUser) {
         let initialCount = 0;
-        const saved = localStorage.getItem(`hf_sent_ids_${user.email || 'guest'}`);
+        const saved = localStorage.getItem(`hf_sent_ids_${activeUser.email || 'guest'}`);
         if (saved) {
           const ids = JSON.parse(saved);
           if (Array.isArray(ids)) {
             initialCount = ids.length;
           }
         }
-        setState(prev => ({ ...prev, currentUser: user, step: 'dashboard', globalSentCount: initialCount }));
+        setState(prev => ({ ...prev, currentUser: activeUser, step: 'dashboard', globalSentCount: initialCount }));
         
-        if (NeonService.isConnected() && user.email) {
-          NeonService.getSentCount(user.email).then(count => {
+        if (NeonService.isConnected() && activeUser.email) {
+          NeonService.getSentCount(activeUser.email).then(count => {
             setState(prev => ({ ...prev, globalSentCount: Math.max(count, initialCount) }));
           }).catch(console.error);
 
-          // Sync templates to DB
-          NeonService.syncTemplates(user.email, tpls).catch(console.error);
+          NeonService.syncTemplates(activeUser.email, tpls).catch(console.error);
         }
-      } catch (e) {
-        localStorage.removeItem(SESSION_KEY);
       }
-    }
+    };
+    checkAuth();
   }, []);
 
   // Synchronize state with URL Hash
@@ -215,8 +242,9 @@ const App: React.FC = () => {
       workbook: null
     }));
     setSentIds(new Set());
-    window.location.hash = '#home';
-    addNotification("Sesión cerrada correctamente", "info");
+    
+    // Redirect to backend logout (which clears cookie and calls Kinde logout)
+    window.location.href = '/api/auth/logout';
   };
   // STRICT LOGIN HANDLER
   const handleLogin = async (email: string, password: string): Promise<boolean> => {

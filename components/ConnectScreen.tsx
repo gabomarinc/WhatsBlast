@@ -563,6 +563,21 @@ export const ConnectScreen: React.FC<ConnectScreenProps> = ({
                                   {isLoading ? 'Verificando...' : 'Iniciar Sesión →'}
                               </button>
                           </div>
+
+                          <div className="relative py-4 flex items-center">
+                              <div className="flex-grow border-t border-secondary-200"></div>
+                              <span className="flex-shrink-0 mx-4 text-[10px] text-secondary-400 font-bold uppercase tracking-widest">O BIEN</span>
+                              <div className="flex-grow border-t border-secondary-200"></div>
+                          </div>
+
+                          <div>
+                              <button
+                                  onClick={() => window.location.href = '/api/auth/login'}
+                                  className="w-full py-3.5 rounded-xl font-black text-sm transition-all transform active:scale-[0.98] bg-[#1a1a1a] text-white hover:bg-black shadow-lg flex items-center justify-center gap-2 border border-secondary-200"
+                              >
+                                  Entrar con SSO / Kinde
+                              </button>
+                          </div>
                       </>
                   )}
 
