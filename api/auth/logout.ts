@@ -1,6 +1,6 @@
 import { serialize } from 'cookie';
 
-export default async function handler(req: any, res: any) {
+export default async function handler(_req: any, res: any) {
   const KINDE_ISSUER_URL = process.env.KINDE_ISSUER_URL;
   const KINDE_SITE_URL = process.env.KINDE_SITE_URL || 'http://localhost:5173';
   const KINDE_POST_LOGOUT_REDIRECT_URL = process.env.KINDE_POST_LOGOUT_REDIRECT_URL || KINDE_SITE_URL;
